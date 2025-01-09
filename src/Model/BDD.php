@@ -1,5 +1,9 @@
 <?php
 
+
+namespace src\Model;
+use PDO;
+
 class BDD
 {
     private static $_instance = null; //Instance de connexion
