@@ -25,13 +25,13 @@ class UserController {
             return json_encode(["code" => 1, "Message" => "Il faut des données"]);
         }
 
-        if (!isset($json->firstname) || !isset($json->lastname)) {
+        if (!isset($json->Firstname) || !isset($json->Lastname)) {
             header("HTTP/1.1 400 Bad Request");
             return json_encode(["code" => 1, "Message" => "Il faut des données"]);
         }
 
         $user = new User();
-        $user->setFirstname($json->Name)
+        $user->setFirstname($json->Firstname)
             ->setLastname($json->Lastname)
             ->setphone($json->Phone)
             ->setBirthDate(new \DateTime($json->BirthDate))
@@ -41,7 +41,7 @@ class UserController {
             ->setUpdatedAt(new \DateTime($json->UpdatedAt));
 
         $id = User::SqlAdd($user);
-        return json_encode(["code" => 0, "Message" => "StreetArt ajouté avec succès", "Id" => $id]);
+        return json_encode(["code" => 0, "Message" => "User ajouté avec succès", "Id" => $id], JSON_THROW_ON_ERROR);
 
     }
 }

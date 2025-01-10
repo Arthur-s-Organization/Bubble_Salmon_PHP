@@ -3,7 +3,9 @@
 
 namespace src\Model;
 
-class User {
+use JsonSerializable;
+
+class User  implements JsonSerializable {
     private ?int $id = null;
     private string $firstname;
     private string $lastname;
@@ -152,10 +154,27 @@ class User {
             $requete->bindValue(':updated_at', $user->getUpdatedAt()->format('Y-m-d'));
 
             $requete->execute();
-            return BDD::getInstance()->lastInsertId();
+            return BDD::getInstance()?->lastInsertId();
         }
         catch (\PDOException $e) {
             return $e->getMessage();
         }
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            "id" => $this->getId(),
+            "firstname" => $this->getLastname(),
+            "lastname" => $this->getLastname(),
+            "phone" => $this->getPhone(),
+            "birth_date" => $this->getBirthDate(),
+            "username" => $this->getUsername(),
+            "password" => $this->getPassword(),
+            "image_repository" => $this->getImageRepository(),
+            "image_file_name" => $this->getImageFileName(),
+            "created_at" => $this->getCreatedAt(),
+            "updated_at" => $this->getUpdatedAt(),
+        ];
     }
 }

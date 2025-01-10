@@ -41,10 +41,10 @@ spl_autoload_register(function ($class) {
 $URLS = explode("/",$_GET["url"]);
 $controller = (isset($URLS[0])) ? $URLS[0] : '';
 $action = (isset($URLS[1])) ? $URLS[1] : '';
-$param = (isset($URLS[2])) ? $URLS[2] : '';
+$param = $URLS[2] ?? '';
 
 
-if($controller != ''){
+if($controller !== ''){
     try{
         $class = "src\Controller\\{$controller}Controller";
         if(class_exists($class)) {
