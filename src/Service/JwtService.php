@@ -21,7 +21,7 @@ class JwtService
             "iss" => $serverName,
             "nbf" => $issuedAt->getTimestamp(),
             "exp" => $expire,
-            "data" => CryptService::encrypt(json_encode($datas))
+            "data" =>  CryptService::encrypt(json_encode($datas))//$datas
         ];
 
         $jwt = JWT::encode($data, self::$secretKey, 'HS256');
