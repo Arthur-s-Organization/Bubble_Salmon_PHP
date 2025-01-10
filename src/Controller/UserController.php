@@ -44,7 +44,6 @@ class UserController {
 
         $id = User::SqlAdd($user);
         return json_encode(["code" => 0, "Message" => "User ajouté avec succès", "Id" => $id], JSON_THROW_ON_ERROR);
-
     }
 
     public function login() {
@@ -83,7 +82,7 @@ class UserController {
         }
 
         $user = User::SqlGetByUsername($json->Username);
-        if($user==null) {
+        if($user == null) {
             header("HTTP/1.1 403 Forbiden");
             return json_encode(
                 [

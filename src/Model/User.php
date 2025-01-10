@@ -7,16 +7,16 @@ use JsonSerializable;
 
 class User  implements JsonSerializable {
     private ?int $id = null;
-    private string $firstname;
-    private string $lastname;
-    private string $phone;
-    private \DateTime $birth_date;
-    private string $username;
-    private string $password;
+    private ?string $firstname;
+    private ?string $lastname;
+    private ?string $phone;
+    private ?\DateTime $birth_date;
+    private ?string $username;
+    private ?string $password;
     private ?string $imageRepository = null;
     private ?string $imageFileName = null;
-    private \DateTime $createdAt;
-    private \DateTime $updatedAt;
+    private ?\DateTime $createdAt;
+    private ?\DateTime $updatedAt;
 
     public function getId(): ?int
     {
