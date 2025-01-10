@@ -1,5 +1,6 @@
 <?php
 
+
 namespace src\Model;
 
 class User {
@@ -152,7 +153,8 @@ class User {
 
             $requete->execute();
             return BDD::getInstance()->lastInsertId();
-        } catch (\PDOException $e) {
+        }
+        catch (\PDOException $e) {
             return $e->getMessage();
         }
     }
