@@ -161,6 +161,22 @@ class User  implements JsonSerializable {
         }
     }
 
+    public static function SqlGetByUsername(string $username) {
+        $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username = :username");
+        $requete->bindValue(':username', $username);
+        $requete->execute();
+
+        $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
+        if ($sqlUser !== false) {
+            $user = new User();
+            $user->setId($sqlUser["id"])
+                ->setUsername($sqlUser["username"])
+                ->setPassword($sqlUser["password"]);
+            return $user;
+        }
+        return null;
+    }
+
     public function jsonSerialize(): array
     {
         return [

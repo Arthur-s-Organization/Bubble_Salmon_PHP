@@ -1,5 +1,6 @@
 <?php
 
+require '../vendor/autoload.php';
 
 //// Inclure la classe BDD si elle n'est pas incluse dans le fichier actuel
 //require_once __DIR__ . '/../src/Model/BDD.php';  // Ajustez le chemin si nécessaire
