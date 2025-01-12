@@ -99,7 +99,7 @@ class Conversation {
 //        }
 //    }
 
-    public function SqlGetAllbyUserId(int $userId) {
+    public static function SqlGetAllbyUserId(int $userId) {
         $requete = BDD::getInstance()->prepare('SELECT * FROM conversations c JOIN conversations_users cu ON c.id = cu.conversation_id WHERE cu.user_id = :userId');
         $requete->bindValue(':userId', $userId);
         $requete->execute();
@@ -108,14 +108,14 @@ class Conversation {
         $conversationsObject = [];
         foreach ($conversationsSql as $conversationSql) {
             $conversation = new Conversation();
-            $conversation->setName($conversationsSql["name"])
-                ->setId($conversationsSql["id"]);
+            $conversation->setName($conversationSql["name"])
+                ->setId($conversationSql["id"]);
             $conversationsObject[] = $conversation;
         }
         return $conversationsObject;
     }
 
-    public function SqlGetById(int $id) {
+    public static function SqlGetById(int $id) {
         $requete = BDD::getInstance()->prepare('SELECT * FROM conversations WHERE id = :id');
         $requete->bindValue(':id', $id);
         $requete->execute();
@@ -123,8 +123,8 @@ class Conversation {
 
         if ($sqlConversation != null) {
             $conversation = new Conversation();
-            $conversation->setId($sqlConversation['Id'])
-                ->setName($sqlConversation['Name']);
+            $conversation->setId($sqlConversation['id'])
+                ->setName($sqlConversation['name']);
 
             return $conversation;
         }
@@ -132,7 +132,7 @@ class Conversation {
         return null;
     }
 
-    public function Sqladd(Conversation $conversation) {
+    public static function SqlAdd(Conversation $conversation) {
 
         try {
             $requete = BDD::getInstance()->prepare("INSERT INTO conversations (name) VALUES (:name)");
@@ -145,5 +145,40 @@ class Conversation {
             return $e->getMessage();
         }
     }
-    
+
+    public static function SqlAddUser(User $user, int $conversationId) {
+        $db = BDD::getInstance();
+
+
+        // Vérifie si la conversation existe
+        $conversationCheck = $db->prepare('SELECT COUNT(*) FROM conversations WHERE id = :conversationId');
+        $conversationCheck->bindValue(':conversationId', $conversationId);
+        $conversationCheck->execute();
+        if ($conversationCheck->fetchColumn() == 0) {
+            return false; // La conversation n'existe pas
+        }
+
+        // Vérifie si l'utilisateur existe
+        $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :userId');
+        $userCheck->bindValue(':userId', $user->getId());
+        $userCheck->execute();
+        if ($userCheck->fetchColumn() == 0) {
+            return false; // L'utilisateur n'existe pas
+        }
+
+        // Vérifie si une association existe déjà
+        $associationCheck = $db->prepare('SELECT COUNT(*) FROM conversations_users WHERE conversation_id = :conversationId AND user_id = :userId');
+        $associationCheck->bindValue(':conversationId', $conversationId);
+        $associationCheck->bindValue(':userId', $user->getId());
+        $associationCheck->execute();
+        if ($associationCheck->fetchColumn() > 0) {
+            return false; // L'association existe déjà
+        }
+
+        $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+        $requete->bindValue(':conversationId', $conversationId);
+        $requete->bindValue(':userId', $user->getId());
+        $requete->execute();
+    }
+
 }
