@@ -10,8 +10,8 @@ class Conversation implements JsonSerializable {
     private ?string $name = null;
     private ?string $imageRepository = null;
     private ?string $imageFileName = null;
-    private ?\DateTime $createdAt;
-    private ?\DateTime $updatedAt;
+    private ?\DateTime $createdAt = null;
+    private ?\DateTime $updatedAt = null;
 
     public function getId(): ?int
     {
@@ -147,7 +147,7 @@ class Conversation implements JsonSerializable {
         }
     }
 
-    public static function SqlAddUser(User $user, int $conversationId) {
+    public static function SqlAddUser(int $userId, int $conversationId) {
         $db = BDD::getInstance();
 
 
@@ -161,7 +161,7 @@ class Conversation implements JsonSerializable {
 
         // Vérifie si l'utilisateur existe
         $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :userId');
-        $userCheck->bindValue(':userId', $user->getId());
+        $userCheck->bindValue(':userId', $userId);
         $userCheck->execute();
         if ($userCheck->fetchColumn() == 0) {
             return false; // L'utilisateur n'existe pas
@@ -170,7 +170,7 @@ class Conversation implements JsonSerializable {
         // Vérifie si une association existe déjà
         $associationCheck = $db->prepare('SELECT COUNT(*) FROM conversations_users WHERE conversation_id = :conversationId AND user_id = :userId');
         $associationCheck->bindValue(':conversationId', $conversationId);
-        $associationCheck->bindValue(':userId', $user->getId());
+        $associationCheck->bindValue(':userId', $userId);
         $associationCheck->execute();
         if ($associationCheck->fetchColumn() > 0) {
             return false; // L'association existe déjà
@@ -178,8 +178,9 @@ class Conversation implements JsonSerializable {
 
         $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
         $requete->bindValue(':conversationId', $conversationId);
-        $requete->bindValue(':userId', $user->getId());
+        $requete->bindValue(':userId', $userId);
         $requete->execute();
+        return BDD::getInstance()->lastInsertId();
     }
 
     public function jsonSerialize(): array

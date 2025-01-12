@@ -24,7 +24,7 @@ class ConversationController {
             return json_encode($result);
         }
 
-        $conversations = Conversation::SqlGetAllbyUserId($result["data"]["id"]);
+        $conversations = Conversation::SqlGetAllbyUserId((int)$result["data"]->id);
         return json_encode($conversations);
     }
 
@@ -36,6 +36,10 @@ class ConversationController {
         }
 
         $result = JwtService::checkToken();
+        if($result["code"] == "1")
+        {
+            return json_encode($result);
+        }
 
         $data = file_get_contents("php://input");
         $json = json_decode($data);
@@ -63,8 +67,43 @@ class ConversationController {
             ->setUpdatedAt(new \DateTime($json->UpdatedAt));
 
         $id = Conversation::SqlAdd($conversation);
-        return json_encode(["code" => 0, "Message" => "StreetArt ajouté avec succès", "Id" => $id]);
+        return json_encode(["code" => 0, "Message" => "Conversation ajoutée avec succès", "Id" => $id]);
 
     }
+
+    public function addUser() {
+        if ($_SERVER["REQUEST_METHOD"] != "POST") {
+            header("HTTP/1.1 405 Method Not Allowed");
+            return json_encode(["code" => 1, "Message" => "POST Attendu"]);
+        }
+
+        $result = JwtService::checkToken();
+        if($result["code"] == "1")
+        {
+            return json_encode($result);
+        }
+
+        $data = file_get_contents("php://input");
+        $json = json_decode($data);
+
+
+        if (empty($json)) {
+            header("HTTP/1.1 400 Bad Request");
+            return json_encode(["code" => 1, "Message" => "Il faut des données"]);
+        }
+
+        if (!isset($json->UserId) || !isset($json->ConversationId) ) {
+            header("HTTP/1.1 400 Bad Request");
+            return json_encode(["code" => 1, "Message" => "Il faut des données"]);
+        }
+
+        $userId = $json->UserId;
+        $conversationId = $json->ConversationId;
+
+        $id = Conversation::SqlAddUser($userId, $conversationId);
+        return json_encode(["code" => 0, "Message" => "Utilisateur ajouté avec succès à la conversation", "Id" => $id]);
+    }
+
+
 
 }
