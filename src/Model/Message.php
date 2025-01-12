@@ -106,6 +106,7 @@ class Message{
 
             $requete->bindValue(':user_id', $message->getUserId());
             $requete->bindValue(':conversation_id', $message->getConversationId());
+            $requete->bindValue(':text', $message->getText());
             $requete->bindValue(':image_repository', $message->getImageRepository());
             $requete->bindValue(':image_file_name', $message->getImageFileName());
             $requete->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d'));
