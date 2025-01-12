@@ -3,8 +3,9 @@
 namespace src\Model;
 
 use src\Service\JwtService;
+use JsonSerializable;
 
-class Conversation {
+class Conversation implements JsonSerializable {
     private ?int $id = null;
     private ?string $name = null;
     private ?string $imageRepository = null;
@@ -179,6 +180,18 @@ class Conversation {
         $requete->bindValue(':conversationId', $conversationId);
         $requete->bindValue(':userId', $user->getId());
         $requete->execute();
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            "id" => $this->getId(),
+            "name" => $this->getName(),
+            "imageRepository" => $this->getImageRepository(),
+            "imageFileName" => $this->getImageFileName(),
+            "createdAt" => $this->getCreatedAt()?->format("Y-m-d"),
+            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d")
+        ];
     }
 
 }

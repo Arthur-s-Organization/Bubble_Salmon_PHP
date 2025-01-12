@@ -184,13 +184,13 @@ class User  implements JsonSerializable {
             "firstname" => $this->getLastname(),
             "lastname" => $this->getLastname(),
             "phone" => $this->getPhone(),
-            "birth_date" => $this->getBirthDate(),
+            "birth_date" => $this->getBirthDate()->format("Y-m-d"),
             "username" => $this->getUsername(),
             "password" => $this->getPassword(),
             "image_repository" => $this->getImageRepository(),
             "image_file_name" => $this->getImageFileName(),
-            "created_at" => $this->getCreatedAt(),
-            "updated_at" => $this->getUpdatedAt(),
+            "created_at" => $this->getCreatedAt()->format("Y-m-d"),
+            "updated_at" => $this->getUpdatedAt()->format("Y-m-d"),
         ];
     }
 }
