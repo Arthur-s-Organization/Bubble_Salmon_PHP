@@ -103,6 +103,7 @@ class UserController {
 
         // Retourne le JWT
         return JwtService::createToken([
+            "id" => $user->getId(),
             "Username" => $user->getUsername()
         ]);
     }
