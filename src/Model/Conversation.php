@@ -99,6 +99,22 @@ class Conversation {
 //        }
 //    }
 
+    public function SqlGetAllbyUserId(int $userId) {
+        $requete = BDD::getInstance()->prepare('SELECT * FROM conversations c JOIN conversations_users cu ON c.id = cu.conversation_id WHERE cu.user_id = :userId');
+        $requete->bindValue(':userId', $userId);
+        $requete->execute();
+
+        $conversationsSql = $requete->fetchAll(\PDO::FETCH_ASSOC);
+        $conversationsObject = [];
+        foreach ($conversationsSql as $conversationSql) {
+            $conversation = new Conversation();
+            $conversation->setName($conversationsSql["name"])
+                ->setId($conversationsSql["id"]);
+            $conversationsObject[] = $conversation;
+        }
+        return $conversationsObject;
+    }
+
     public function SqlGetById(int $id) {
         $requete = BDD::getInstance()->prepare('SELECT * FROM conversations WHERE id = :id');
         $requete->bindValue(':id', $id);
@@ -116,8 +132,18 @@ class Conversation {
         return null;
     }
 
+    public function Sqladd(Conversation $conversation) {
 
+        try {
+            $requete = BDD::getInstance()->prepare("INSERT INTO conversations (name) VALUES (:name)");
 
+            $requete->bindValue(':name', $conversation->getName());
 
-
+            $requete->execute();
+            return BDD::getInstance()->lastInsertId();
+        } catch (\PDOException $e) {
+            return $e->getMessage();
+        }
+    }
+    
 }
