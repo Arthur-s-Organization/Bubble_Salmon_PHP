@@ -9,8 +9,8 @@ class Message{
     private ?string $text= null;
     private ?string $imageRepository = null;
     private ?string $imageFileName = null;
-    private ?\DateTime $createdAt;
-    private ?\DateTime $updatedAt;
+    private ?\DateTime $createdAt = null;
+    private ?\DateTime $updatedAt = null;
 
     public function getId(): ?int
     {
