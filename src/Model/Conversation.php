@@ -117,20 +117,23 @@ class Conversation implements JsonSerializable {
     }
 
     public static function SqlGetById(int $id) {
-        $requete = BDD::getInstance()->prepare('SELECT * FROM conversations WHERE id = :id');
+        $requete = BDD::getInstance()->prepare('SELECT * FROM messages WHERE conversation_id = :id ORDER BY created_at desc');
         $requete->bindValue(':id', $id);
         $requete->execute();
-        $sqlConversation = $requete->fetch(\PDO::FETCH_ASSOC);
+        $messagesSql = $requete->fetchall(\PDO::FETCH_ASSOC);
 
-        if ($sqlConversation != null) {
-            $conversation = new Conversation();
-            $conversation->setId($sqlConversation['id'])
-                ->setName($sqlConversation['name']);
-
-            return $conversation;
+        $messagesObject = [];
+        foreach ($messagesSql as $messageSql) {
+            $message = new Message();
+            $message->setId($messageSql["id"])
+                ->setConversationId($messageSql["conversation_id"])
+                ->setUserId($messageSql["user_id"])
+                ->settext($messageSql["text"])
+                ->setcreatedAt(new \DateTime($messageSql["created_at"]))
+                ->setupdatedAt(new \DateTime($messageSql["updated_at"]));
+            $messagesObject[] = $message;
         }
-
-        return null;
+        return $messagesObject;
     }
 
     public static function SqlAdd(Conversation $conversation) {
@@ -182,6 +185,7 @@ class Conversation implements JsonSerializable {
         $requete->execute();
         return BDD::getInstance()->lastInsertId();
     }
+
 
     public function jsonSerialize(): array
     {
