@@ -46,7 +46,8 @@ class UserController {
         return json_encode(["code" => 0, "Message" => "User ajouté avec succès", "Id" => $id], JSON_THROW_ON_ERROR);
     }
 
-    public function login() {
+    public function login()
+    {
         header("Content-type: application/json; charset=utf-8");
 
         if($_SERVER["REQUEST_METHOD"] != "POST") {
@@ -104,7 +105,54 @@ class UserController {
         // Retourne le JWT
         return JwtService::createToken([
             "id" => $user->getId(),
-            "Username" => $user->getUsername()
+            "username" => $user->getUsername()
         ]);
+    }
+
+
+    public function getAll() // récupère la liste de tous les utilisateurs
+    {
+        if ($_SERVER["REQUEST_METHOD"] != "GET") {
+            header("HTTP/1.1 405 Method Not Allowed");
+            return json_encode(["code" => 1, "Message" => "Get Attendu"]);
+        }
+
+        $result = JwtService::checkToken();
+        if($result["code"] == "1")
+        {
+            return json_encode($result);
+        }
+
+        $users = User::SqlGetAll();
+        return json_encode($users);
+
+    }
+
+    public function show() // récupère la "fiche" de l'utilisateur connecté
+    {
+        if ($_SERVER["REQUEST_METHOD"] != "GET") {
+            header("HTTP/1.1 405 Method Not Allowed");
+            return json_encode(["code" => 1, "Message" => "Get Attendu"]);
+        }
+
+        $result = JwtService::checkToken();
+        if($result["code"] == "1")
+        {
+            return json_encode($result);
+        }
+
+        $userId = (int)$result["data"]->id;
+        $user = User::SqlGetById($userId);
+
+        if($user == null) {
+            header("HTTP/1.1 403 Forbiden");
+            return json_encode(
+                [
+                    "status" => "error",
+                    "message" => "Username inconnu dans notre système"]
+            );
+        }
+
+        return json_encode($user);
     }
 }

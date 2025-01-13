@@ -7,16 +7,16 @@ use JsonSerializable;
 
 class User  implements JsonSerializable {
     private ?int $id = null;
-    private ?string $firstname;
-    private ?string $lastname;
-    private ?string $phone;
-    private ?\DateTime $birth_date;
-    private ?string $username;
-    private ?string $password;
+    private ?string $firstname = null;
+    private ?string $lastname = null;
+    private ?string $phone  = null;
+    private ?\DateTime $birth_date = null;
+    private ?string $username = null;
+    private ?string $password  = null;
     private ?string $imageRepository = null;
     private ?string $imageFileName = null;
-    private ?\DateTime $createdAt;
-    private ?\DateTime $updatedAt;
+    private ?\DateTime $createdAt = null;
+    private ?\DateTime $updatedAt = null;
 
     public function getId(): ?int
     {
@@ -29,7 +29,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getFirstname(): string
+    public function getFirstname(): ?string
     {
         return $this->firstname;
     }
@@ -40,7 +40,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getLastname(): string
+    public function getLastname(): ?string
     {
         return $this->lastname;
     }
@@ -51,7 +51,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getPhone(): string
+    public function getPhone(): ?string
     {
         return $this->phone;
     }
@@ -62,7 +62,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getBirthDate(): \DateTime
+    public function getBirthDate(): ?\DateTime
     {
         return $this->birth_date;
     }
@@ -73,7 +73,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getUsername(): string
+    public function getUsername(): ?string
     {
         return $this->username;
     }
@@ -84,7 +84,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
     }
@@ -117,7 +117,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getCreatedAt(): \DateTime
+    public function getCreatedAt(): ?\DateTime
     {
         return $this->createdAt;
     }
@@ -128,7 +128,7 @@ class User  implements JsonSerializable {
         return $this;
     }
 
-    public function getUpdatedAt(): \DateTime
+    public function getUpdatedAt(): ?\DateTime
     {
         return $this->updatedAt;
     }
@@ -150,8 +150,8 @@ class User  implements JsonSerializable {
             $requete->bindValue(':birth_date', $user->getBirthDate()?->format('Y-m-d'));
             $requete->bindValue(':username', $user->getUsername());
             $requete->bindValue(':password', $user->getPassword());
-            $requete->bindValue(':created_at', $user->getCreatedAt()->format('Y-m-d'));
-            $requete->bindValue(':updated_at', $user->getUpdatedAt()->format('Y-m-d'));
+            $requete->bindValue(':created_at', $user->getCreatedAt()?->format('Y-m-d'));
+            $requete->bindValue(':updated_at', $user->getUpdatedAt()?->format('Y-m-d'));
 
             $requete->execute();
             return BDD::getInstance()?->lastInsertId();
@@ -177,20 +177,62 @@ class User  implements JsonSerializable {
         return null;
     }
 
+    public static function SqlGetAll() {
+        $requete = BDD::getInstance()->prepare("SELECT * FROM users");
+        $requete->execute();
+
+        $sqlUsers = $requete->fetchAll(\PDO::FETCH_ASSOC);
+        if ($sqlUsers !== false) {
+            $users = [];
+            foreach ($sqlUsers as $sqlUser) {
+                $user = new User();
+                $user->setId($sqlUser["id"])
+                    ->setFirstname($sqlUser["firstname"])
+                    ->setLastname($sqlUser["lastname"])
+                    ->setphone($sqlUser["phone"])
+                    ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
+                    ->setUsername($sqlUser["username"]);
+                $users[] = $user;
+            }
+            return $users;
+        }
+    }
+
+    public static function SqlGetById(int $userId) {
+        $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE id = :id");
+        $requete->bindValue(':id', $userId);
+        $requete->execute();
+
+        $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
+        if ($sqlUser !== false) {
+            $user = new User();
+            $user->setId($sqlUser["id"])
+                ->setFirstname($sqlUser["firstname"])
+                ->setLastname($sqlUser["lastname"])
+                ->setphone($sqlUser["phone"])
+                ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
+                ->setUsername($sqlUser["username"])
+                ->setCreatedAt(new \DateTime($sqlUser["created_at"]))
+                ->setupdatedAt(new \DateTime($sqlUser["updated_at"]));
+            return $user;
+        }
+        return null;
+    }
+
     public function jsonSerialize(): array
     {
         return [
             "id" => $this->getId(),
-            "firstname" => $this->getLastname(),
+            "firstname" => $this->getFirstname(),
             "lastname" => $this->getLastname(),
             "phone" => $this->getPhone(),
-            "birth_date" => $this->getBirthDate()->format("Y-m-d"),
+            "birth_date" => $this->getBirthDate()?->format("Y-m-d"),
             "username" => $this->getUsername(),
             "password" => $this->getPassword(),
             "image_repository" => $this->getImageRepository(),
             "image_file_name" => $this->getImageFileName(),
-            "created_at" => $this->getCreatedAt()->format("Y-m-d"),
-            "updated_at" => $this->getUpdatedAt()->format("Y-m-d"),
+            "created_at" => $this->getCreatedAt()?->format("Y-m-d"),
+            "updated_at" => $this->getUpdatedAt()?->format("Y-m-d"),
         ];
     }
 }

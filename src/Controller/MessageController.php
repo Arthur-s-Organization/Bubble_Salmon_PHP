@@ -12,7 +12,7 @@ class MessageController {
         header('Content-Type: application/json; charset=utf-8');
     }
 
-    public function add() //ajouter un message à une conversation
+    public function add() //ajoute un message à une conversation
     {
         if ($_SERVER["REQUEST_METHOD"] != "POST") {
             header("HTTP/1.1 405 Method Not Allowed");
@@ -53,6 +53,5 @@ class MessageController {
 
         $id = Message::SqlAdd($message);
         return json_encode(["code" => 0, "Message" => "Message ajouté avec succès", "Id" => $id]);
-
     }
 }
