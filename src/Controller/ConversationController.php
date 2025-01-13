@@ -12,7 +12,7 @@ class ConversationController {
         header('Content-Type: application/json; charset=utf-8');
     }
 
-    public function getAll() // récupère toutes les conversations de l'utilisateur
+    public function getAll() // récupère toutes les conversations de l'utilisateur (sans le dernier message pour l'instant)
     {
         if ($_SERVER["REQUEST_METHOD"] != "GET") {
             header("HTTP/1.1 405 Method Not Allowed");
@@ -29,7 +29,7 @@ class ConversationController {
         return json_encode($conversations);
     }
 
-    public function add() // créé une nouvelle conversation
+    public function add() // créé une nouvelle conversation (sans utilisateur pour l'instant)
     {
         if ($_SERVER["REQUEST_METHOD"] != "POST") {
             header("HTTP/1.1 405 Method Not Allowed");

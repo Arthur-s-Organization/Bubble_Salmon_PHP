@@ -109,6 +109,7 @@ class UserController {
         ]);
     }
 
+
     public function getAll() // récupère la liste de tous les utilisateurs
     {
         if ($_SERVER["REQUEST_METHOD"] != "GET") {
@@ -127,7 +128,7 @@ class UserController {
 
     }
 
-    public function show()
+    public function show() // récupère la "fiche" de l'utilisateur connecté
     {
         if ($_SERVER["REQUEST_METHOD"] != "GET") {
             header("HTTP/1.1 405 Method Not Allowed");
