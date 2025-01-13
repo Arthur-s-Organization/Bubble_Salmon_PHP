@@ -1,8 +1,9 @@
 <?php
 
 namespace src\Model;
+use JsonSerializable;
 
-class Message{
+class Message implements JsonSerializable{
     private ?int $id = null;
     private ?int $userId = null;
     private ?int $conversationId = null;
@@ -117,6 +118,20 @@ class Message{
         } catch (\PDOException $e) {
             return $e->getMessage();
         }
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            "id" => $this->getId(),
+            "user_id" => $this->getUserId(),
+            "conversation_id" => $this->getConversationId(),
+            "text" => $this->getText(),
+            "imageRepository" => $this->getImageRepository(),
+            "imageFileName" => $this->getImageFileName(),
+            "createdAt" => $this->getCreatedAt()?->format("Y-m-d"),
+            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d")
+        ];
     }
 
 }
