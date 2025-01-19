@@ -55,20 +55,20 @@ if($controller !== ''){
             }
             else
             {
-                throw new Exception("Action {$action} does not exist in {$class}");
+                throw new \src\Exception\ApiException("Action {$action} does not exist in {$class}");
             }
         }
         else
         {
-            throw new Exception("Controller {$controller} does not exist");
+            throw new \src\Exception\ApiException("Controller {$controller} does not exist");
         }
-    }catch (Exception $e){
-//        $controller = new ErrorController();
-//        echo $controller->show($e);
+    }catch (\src\Exception\ApiException $e){
+        $controller = new \src\Controller\ErrorController();
+        echo $controller->show($e);
     }
 }else{
-    //Page par défaut
-//    $controller = new \src\Controller\StreetArtController();
+//    $controller = new \src\Controller\UserController();
 //    echo $controller->index();
+    echo json_encode(["message" => "Welcome to our API!"]);
 }
 
