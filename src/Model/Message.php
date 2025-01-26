@@ -2,6 +2,7 @@
 
 namespace src\Model;
 use JsonSerializable;
+use src\Exception\ApiException;
 
 class Message implements JsonSerializable{
     private ?int $id = null;
@@ -110,13 +111,14 @@ class Message implements JsonSerializable{
             $requete->bindValue(':text', $message->getText());
             $requete->bindValue(':image_repository', $message->getImageRepository());
             $requete->bindValue(':image_file_name', $message->getImageFileName());
-            $requete->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d'));
-            $requete->bindValue(':updated_at', $message->getUpdatedAt()?->format('Y-m-d'));
+            $requete->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $requete->bindValue(':updated_at', $message->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
             $requete->execute();
             return BDD::getInstance()->lastInsertId();
-        } catch (\PDOException $e) {
-            return $e->getMessage();
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
     }
 
@@ -129,8 +131,8 @@ class Message implements JsonSerializable{
             "text" => $this->getText(),
             "imageRepository" => $this->getImageRepository(),
             "imageFileName" => $this->getImageFileName(),
-            "createdAt" => $this->getCreatedAt()?->format("Y-m-d"),
-            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d")
+            "createdAt" => $this->getCreatedAt()?->format("Y-m-d H:i:s"),
+            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d H:i:s")
         ];
     }
 

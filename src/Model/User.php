@@ -4,6 +4,7 @@
 namespace src\Model;
 
 use JsonSerializable;
+use src\Exception\ApiException;
 
 class User  implements JsonSerializable {
     private ?int $id = null;
@@ -34,7 +35,7 @@ class User  implements JsonSerializable {
         return $this->firstname;
     }
 
-    public function setFirstname(string $firstname): User
+    public function setFirstname(?string $firstname): User
     {
         $this->firstname = $firstname;
         return $this;
@@ -45,7 +46,7 @@ class User  implements JsonSerializable {
         return $this->lastname;
     }
 
-    public function setLastname(string $lastname): User
+    public function setLastname(?string $lastname): User
     {
         $this->lastname = $lastname;
         return $this;
@@ -56,7 +57,7 @@ class User  implements JsonSerializable {
         return $this->phone;
     }
 
-    public function setPhone(string $phone): User
+    public function setPhone(?string $phone): User
     {
         $this->phone = $phone;
         return $this;
@@ -67,7 +68,7 @@ class User  implements JsonSerializable {
         return $this->birth_date;
     }
 
-    public function setBirthDate(\DateTime $birth_date): User
+    public function setBirthDate(?\DateTime $birth_date): User
     {
         $this->birth_date = $birth_date;
         return $this;
@@ -78,7 +79,7 @@ class User  implements JsonSerializable {
         return $this->username;
     }
 
-    public function setUsername(string $username): User
+    public function setUsername(?string $username): User
     {
         $this->username = $username;
         return $this;
@@ -89,7 +90,7 @@ class User  implements JsonSerializable {
         return $this->password;
     }
 
-    public function setPassword(string $password): User
+    public function setPassword(?string $password): User
     {
         $this->password = $password;
         return $this;
@@ -122,7 +123,7 @@ class User  implements JsonSerializable {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTime $createdAt): User
+    public function setCreatedAt(?\DateTime $createdAt): User
     {
         $this->createdAt = $createdAt;
         return $this;
@@ -133,7 +134,7 @@ class User  implements JsonSerializable {
         return $this->updatedAt;
     }
 
-    public function setUpdatedAt(\DateTime $updatedAt): User
+    public function setUpdatedAt(?\DateTime $updatedAt): User
     {
         $this->updatedAt = $updatedAt;
         return $this;
@@ -141,7 +142,8 @@ class User  implements JsonSerializable {
 
     public static function SqlAdd(User $user)
     {
-        try {
+        try
+        {
             $requete = BDD::getInstance()->prepare("INSERT INTO users (firstname,lastname,phone,birth_date, username, password, created_at, updated_at) VALUES (:firstname,:lastname,:phone,:birth_date, :username, :password, :created_at, :updated_at)");
 
             $requete->bindValue(':firstname', $user->getFirstname());
@@ -150,73 +152,90 @@ class User  implements JsonSerializable {
             $requete->bindValue(':birth_date', $user->getBirthDate()?->format('Y-m-d'));
             $requete->bindValue(':username', $user->getUsername());
             $requete->bindValue(':password', $user->getPassword());
-            $requete->bindValue(':created_at', $user->getCreatedAt()?->format('Y-m-d'));
-            $requete->bindValue(':updated_at', $user->getUpdatedAt()?->format('Y-m-d'));
+            $requete->bindValue(':created_at', $user->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $requete->bindValue(':updated_at', $user->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
             $requete->execute();
             return BDD::getInstance()?->lastInsertId();
         }
         catch (\PDOException $e) {
-            return $e->getMessage();
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
     }
 
     public static function SqlGetByUsername(string $username) {
-        $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username = :username");
-        $requete->bindValue(':username', $username);
-        $requete->execute();
 
-        $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
-        if ($sqlUser !== false) {
-            $user = new User();
-            $user->setId($sqlUser["id"])
-                ->setUsername($sqlUser["username"])
-                ->setPassword($sqlUser["password"]);
-            return $user;
+        try
+        {
+            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username = :username");
+            $requete->bindValue(':username', $username);
+            $requete->execute();
+
+            $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
+            if ($sqlUser !== false) {
+                $user = new User();
+                $user->setId($sqlUser["id"])
+                    ->setUsername($sqlUser["username"])
+                    ->setPassword($sqlUser["password"]);
+                return $user;
+            }
+            return null;
         }
-        return null;
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
     }
 
     public static function SqlGetAll() {
-        $requete = BDD::getInstance()->prepare("SELECT * FROM users");
-        $requete->execute();
+        try {
+            $requete = BDD::getInstance()->prepare("SELECT * FROM users");
+            $requete->execute();
 
-        $sqlUsers = $requete->fetchAll(\PDO::FETCH_ASSOC);
-        if ($sqlUsers !== false) {
-            $users = [];
-            foreach ($sqlUsers as $sqlUser) {
+            $sqlUsers = $requete->fetchAll(\PDO::FETCH_ASSOC);
+            if ($sqlUsers !== false) {
+                $users = [];
+                foreach ($sqlUsers as $sqlUser) {
+                    $user = new User();
+                    $user->setId($sqlUser["id"])
+                        ->setFirstname($sqlUser["firstname"])
+                        ->setLastname($sqlUser["lastname"])
+                        ->setphone($sqlUser["phone"])
+                        ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
+                        ->setUsername($sqlUser["username"]);
+                    $users[] = $user;
+                }
+                return $users;
+            }
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function SqlGetById(int $userId) {
+        try {
+            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE id = :id");
+            $requete->bindValue(':id', $userId);
+            $requete->execute();
+
+            $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
+            if ($sqlUser !== false) {
                 $user = new User();
                 $user->setId($sqlUser["id"])
                     ->setFirstname($sqlUser["firstname"])
                     ->setLastname($sqlUser["lastname"])
                     ->setphone($sqlUser["phone"])
                     ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
-                    ->setUsername($sqlUser["username"]);
-                $users[] = $user;
+                    ->setUsername($sqlUser["username"])
+                    ->setCreatedAt(new \DateTime($sqlUser["created_at"]))
+                    ->setupdatedAt(new \DateTime($sqlUser["updated_at"]));
+                return $user;
             }
-            return $users;
+            return null;
         }
-    }
-
-    public static function SqlGetById(int $userId) {
-        $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE id = :id");
-        $requete->bindValue(':id', $userId);
-        $requete->execute();
-
-        $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
-        if ($sqlUser !== false) {
-            $user = new User();
-            $user->setId($sqlUser["id"])
-                ->setFirstname($sqlUser["firstname"])
-                ->setLastname($sqlUser["lastname"])
-                ->setphone($sqlUser["phone"])
-                ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
-                ->setUsername($sqlUser["username"])
-                ->setCreatedAt(new \DateTime($sqlUser["created_at"]))
-                ->setupdatedAt(new \DateTime($sqlUser["updated_at"]));
-            return $user;
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
-        return null;
     }
 
     public function jsonSerialize(): array
@@ -231,8 +250,8 @@ class User  implements JsonSerializable {
             "password" => $this->getPassword(),
             "image_repository" => $this->getImageRepository(),
             "image_file_name" => $this->getImageFileName(),
-            "created_at" => $this->getCreatedAt()?->format("Y-m-d"),
-            "updated_at" => $this->getUpdatedAt()?->format("Y-m-d"),
+            "created_at" => $this->getCreatedAt()?->format("Y-m-d H:i:s"),
+            "updated_at" => $this->getUpdatedAt()?->format("Y-m-d H:i:s"),
         ];
     }
 }

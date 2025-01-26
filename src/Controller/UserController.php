@@ -2,113 +2,82 @@
 
 namespace src\Controller;
 
+use DateTime;
 use src\Exception\ApiException;
 use src\Model\User;
 use src\Service\JwtService;
 
 class UserController {
+
     public function __construct()
     {
         header('Content-Type: application/json; charset=utf-8');
     }
 
+
     public function register() {
-        if ($_SERVER["REQUEST_METHOD"] != "POST") {
-//            header("HTTP/1.1 405 Method Not Allowed");
-//            return json_encode(["code" => 1, "Message" => "POST Attendu"]);
-            throw new ApiException("POST Attendu", 405);
+        if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+            throw new ApiException("Method POST expected", 405);
         }
 
-        $data = file_get_contents("php://input");
-        $json = json_decode($data);
+        $jsonDatasStr = file_get_contents("php://input");
+        $jsonDatasObj = json_decode($jsonDatasStr);
 
-
-        if (empty($json)) {
-//            header("HTTP/1.1 400 Bad Request");
-//            return json_encode(["code" => 1, "Message" => "Il faut des données"]);
-            throw new ApiException("Il faut des données", 400);
+        if (empty($jsonDatasObj)) {
+            throw new ApiException("No data provided in the request body", 400);
         }
 
-        if (!isset($json->Firstname) || !isset($json->Lastname)) {
-//            header("HTTP/1.1 400 Bad Request");
-//            return json_encode(["code" => 1, "Message" => "Il faut des données"]);
-            throw new ApiException("Il faut des donnéeeees", 400);
+        if (!isset($jsonDatasObj->Firstname) || !isset($jsonDatasObj->Lastname) || !isset($jsonDatasObj->Phone) || !isset($jsonDatasObj->BirthDate) || !isset($jsonDatasObj->Username) || !isset($jsonDatasObj->Password))
+        {
+            throw new ApiException("Missing required fields", 400); // peut etre ajouter les autres champs
         }
+
+
+
+        $now = new DateTime();
+        $hashPassword = password_hash($jsonDatasObj->Password, PASSWORD_BCRYPT, ['cost' => 12]);
 
         $user = new User();
-        $hashPassword = password_hash($json->Password, PASSWORD_BCRYPT, ['cost' => 12]);
-        $user->setFirstname($json->Firstname)
-            ->setLastname($json->Lastname)
-            ->setphone($json->Phone)
-            ->setBirthDate(new \DateTime($json->BirthDate))
-            ->setUsername($json->Username)
+        $user->setFirstname($jsonDatasObj->Firstname)
+            ->setLastname($jsonDatasObj->Lastname)
+            ->setphone($jsonDatasObj->Phone)
+            ->setBirthDate(new \DateTime($jsonDatasObj->BirthDate))
+            ->setUsername($jsonDatasObj->Username)
             ->setPassword($hashPassword)
-            ->setCreatedAt(new \DateTime($json->CreatedAt))
-            ->setUpdatedAt(new \DateTime($json->UpdatedAt));
+            ->setCreatedAt($now)
+            ->setUpdatedAt($now);
 
-        $id = User::SqlAdd($user);
-        return json_encode(["code" => 0, "Message" => "User ajouté avec succès", "Id" => $id], JSON_THROW_ON_ERROR);
+        $userId = User::SqlAdd($user);
+        return json_encode(["status" => 'success', "message" => "User successfully added", "UserId" => $userId], JSON_THROW_ON_ERROR); // a voir gestio ndes erreus plsu tard peut etre
     }
+
 
     public function login()
     {
         header("Content-type: application/json; charset=utf-8");
 
-        if($_SERVER["REQUEST_METHOD"] != "POST") {
-//            header("HTTP/1.1 405 Method Not Allowed");
-//            return json_encode(
-//                [
-//                    "status" => "error",
-//                    "message" => "Post Attendu"]
-//            );
-            throw new ApiException("Post Attendu", 405);
+        if($_SERVER["REQUEST_METHOD"] !== "POST") {
+            throw new ApiException("Method POST expected", 405);
         }
 
-        // Récupération du Body en String
-        $data  = file_get_contents("php://input");
-        //Conversion du String en JSON
-        $json = json_decode($data);
+        $jsonDatasStr = file_get_contents("php://input");
+        $jsonDatasObj = json_decode($jsonDatasStr);
 
-        if(empty($json)) {
-//            header("HTTP/1.1 400 Bad Request");
-//            return json_encode(
-//                [
-//                    "status" => "error",
-//                    "message" => "Il faut des données"]
-//            );
-            throw new ApiException("Il faut des données", 400);
+        if(empty($jsonDatasObj)) {
+            throw new ApiException("No data provided in the request body", 400);
         }
 
-        if(!isset($json->Username) || !isset($json->Password) ) {
-//            header("HTTP/1.1 400 Bad Request");
-//            return json_encode(
-//                [
-//                    "status" => "error",
-//                    "message" => "Il faut des données"]
-//            );
-            throw new ApiException("Il faut des données", 400);
+        if(!isset($jsonDatasObj->Username) || !isset($jsonDatasObj->Password) ) {
+            throw new ApiException("Missing required fields : Username and Password are required", 400);
         }
 
-        $user = User::SqlGetByUsername($json->Username);
-        if($user == null) {
-//            header("HTTP/1.1 403 Forbiden");
-//            return json_encode(
-//                [
-//                    "status" => "error",
-//                    "message" => "Username inconnu dans notre système"]
-//            );
-            throw new ApiException("Username inconnu dans notre système", 403);
+        $user = User::SqlGetByUsername($jsonDatasObj->Username);
+        if($user === null) {
+            throw new ApiException("The provided username does not exist in our system", 403);
         }
 
-        // Comparer le mot de passe
-        if(!password_verify($json->Password, $user->getPassword())){
-//            header("HTTP/1.1 403 Forbiden");
-//            return json_encode(
-//                [
-//                    "status" => "error",
-//                    "message" => "Mot de passe incorrect"]
-//            );
-            throw new ApiException("Mot de passe incorrect", 403);
+        if(!password_verify($jsonDatasObj->Password, $user->getPassword())){
+            throw new ApiException("Invalid credentials: The password provided does not match our records", 403);
         }
 
         // Retourne le JWT
@@ -121,48 +90,29 @@ class UserController {
 
     public function getAll() // récupère la liste de tous les utilisateurs
     {
-        if ($_SERVER["REQUEST_METHOD"] != "GET") {
-//            header("HTTP/1.1 405 Method Not Allowed");
-//            return json_encode(["code" => 1, "Message" => "Get Attendu"]);
-            throw new ApiException("Get Attendu", 405);
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
         }
 
-        $result = JwtService::checkToken();
-        if($result["code"] == "1")
-        {
-            return json_encode($result);
-        }
+        JwtService::checkToken();
 
         $users = User::SqlGetAll();
         return json_encode($users);
-
     }
+
 
     public function show() // récupère la "fiche" de l'utilisateur connecté
     {
-        if ($_SERVER["REQUEST_METHOD"] != "GET") {
-//            header("HTTP/1.1 405 Method Not Allowed");
-//            return json_encode(["code" => 1, "Message" => "Get Attendu"]);
-            throw new ApiException("Get Attendu", 405);
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
         }
 
-        $result = JwtService::checkToken();
-        if($result["code"] == "1")
-        {
-            return json_encode($result);
-        }
+        $tokensDatas = JwtService::checkToken();
+        $userId = (int)$tokensDatas->id;
 
-        $userId = (int)$result["data"]->id;
         $user = User::SqlGetById($userId);
-
-        if($user == null) {
-//            header("HTTP/1.1 403 Forbiden");
-//            return json_encode(
-//                [
-//                    "status" => "error",
-//                    "message" => "Username inconnu dans notre système"]
-//            );
-            throw new ApiException("Username inconnu dans notre système", 403);
+        if($user === null) {
+            throw new ApiException("User not found in our system. Please check your credentials and try again.", 403);
         }
 
         return json_encode($user);
