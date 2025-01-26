@@ -68,8 +68,6 @@ class ConversationController
         $imageName = null;
         $now = new \DateTime();
 
-        $imageName = "coucou";
-
         if (isset($jsonDatasObj->Image)) {
             $imageName = uniqid() . ".jpg";
             //Fabriquer le répertoire d'accueil
