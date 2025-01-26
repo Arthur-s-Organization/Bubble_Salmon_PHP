@@ -4,6 +4,7 @@ namespace src\Service;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use src\Exception\ApiException;
 
 class JwtService
 {
@@ -13,7 +14,7 @@ class JwtService
     {
         $issuedAt = new \DateTimeImmutable();
 
-        $expire = $issuedAt->modify('+6 minutes')->getTimestamp();
+        $expire = $issuedAt->modify('+16 minutes')->getTimestamp();
         $serverName = "cesi.local";
 
         $data = [
@@ -30,43 +31,34 @@ class JwtService
     }
 
 
-    public static function checkToken(): array
+    public static function checkToken()
     {
         if (!preg_match('/Bearer\s(\S+)/', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
-            $result = ["code" => 1, "body" => "Token non trouvé dans la requête"];
-            return $result;
+            throw new ApiException("Token not found in the request", 401);
         }
 
         $jwt = $matches[1];
         if (!$jwt) {
-            $result = ["code" => 1, "body" => "Aucun jeton n'a pu être extrait de l'en-tête d'autorisation."];
-            return $result;
+            throw new ApiException("No token could be extracted from the authorization header.", 401);
         }
 
         try
         {
             $token = JWT::decode($jwt, new Key(self::$secretKey, 'HS256'));
         }
-        catch (\Exception $e)
+        catch (\Exception $e) // a gérer le try catach ici
         {
-            $result = ["code" => 1, "body" => "Les données du jeton ne sont pas compatibles : {$e->getMessage()}"];
-            return $result;
+            throw new ApiException("The token data is not compatible : {$e->getMessage()}", 401);
         }
 
         $now = new \DateTimeImmutable();
         $serverName = "cesi.local";
 
         if ($token->iss !== $serverName || $token->nbf > $now->getTimestamp() || $token->exp < $now->getTimestamp()) {
-            $result = ["code" => 1, "body" => "Les données du jeton ne sont pas compatibles"];
-            return $result;
+            throw new ApiException("The token data is not compatible", 401);
         }
 
-        $result = [
-            "code" => 0,
-            "body" => "Token OK",
-            "data" => json_decode(CryptService::decrypt($token->data)) //On récupère le champs datas du payload du JWT pour pouvoir par exemple comparer les roles avec ceux attendus
-        ];
-        return $result;
+        return json_decode(CryptService::decrypt($token->data)); //On récupère le champs datas du payload du JWT pour pouvoir par exemple comparer les roles avec ceux attendus;
     }
 
 
