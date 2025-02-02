@@ -32,9 +32,25 @@ class UserController {
             throw new ApiException("Missing required fields", 400); // peut etre ajouter les autres champs
         }
 
-
-
+        $sqlRepository = null;
+        $imageName = null;
         $now = new DateTime();
+
+        if (isset($jsonDatasObj->Image)) {
+            $imageName = uniqid() . ".jpg";
+            //Fabriquer le répertoire d'accueil
+            $dateNow = new \DateTime();
+            $sqlRepository = $now->format('Y/m');
+            $repository = './uploads/images/' . $now->format('Y/m');
+            if (!is_dir($repository)) {
+                mkdir($repository, 0777, true);
+            }
+            //Fabriquer l'image
+            $ifp = fopen($repository . "/" . $imageName, "wb");
+            fwrite($ifp, base64_decode($jsonDatasObj->Image));
+            fclose($ifp);
+        }
+
         $hashPassword = password_hash($jsonDatasObj->Password, PASSWORD_BCRYPT, ['cost' => 12]);
 
         $user = new User();
@@ -44,6 +60,8 @@ class UserController {
             ->setBirthDate(new \DateTime($jsonDatasObj->BirthDate))
             ->setUsername($jsonDatasObj->Username)
             ->setPassword($hashPassword)
+            ->setImageRepository($sqlRepository)
+            ->setImageFileName($imageName)
             ->setCreatedAt($now)
             ->setUpdatedAt($now);
 

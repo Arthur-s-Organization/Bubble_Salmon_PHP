@@ -60,9 +60,9 @@ class ConversationController
             throw new ApiException("Missing required fields : Name is required", 400);
         }
 
-        if (!isset($jsonDatasObj->Image)) {
-            throw new ApiException("Missing required fields : Image is required", 400);
-        }
+//        if (!isset($jsonDatasObj->Image)) {
+//            throw new ApiException("Missing required fields : Image is required", 400);
+//        }
 
         $sqlRepository = null;
         $imageName = null;
