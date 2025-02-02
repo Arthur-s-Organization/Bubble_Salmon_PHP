@@ -6,7 +6,8 @@ use src\Exception\ApiException;
 use src\Model\Conversation;
 use src\Service\JwtService;
 
-class ConversationController {
+class ConversationController
+{
 
     public function __construct()
     {
@@ -59,9 +60,28 @@ class ConversationController {
             throw new ApiException("Missing required fields : Name is required", 400);
         }
 
+//        if (!isset($jsonDatasObj->Image)) {
+//            throw new ApiException("Missing required fields : Image is required", 400);
+//        }
+
         $sqlRepository = null;
         $imageName = null;
         $now = new \DateTime();
+
+        if (isset($jsonDatasObj->Image)) {
+            $imageName = uniqid() . ".jpg";
+            //Fabriquer le répertoire d'accueil
+            $dateNow = new \DateTime();
+            $sqlRepository = $now->format('Y/m');
+            $repository = './uploads/images/' . $now->format('Y/m');
+            if (!is_dir($repository)) {
+                mkdir($repository, 0777, true);
+            }
+            //Fabriquer l'image
+            $ifp = fopen($repository . "/" . $imageName, "wb");
+            fwrite($ifp, base64_decode($jsonDatasObj->Image));
+            fclose($ifp);
+        }
 
         $conversation = new Conversation();
         $conversation->setName($jsonDatasObj->Name)
@@ -91,7 +111,7 @@ class ConversationController {
             throw new ApiException("No data provided in the request body", 400);
         }
 
-        if (!isset($jsonDatasObj->UserId) || !isset($jsonDatasObj->ConversationId) ) {
+        if (!isset($jsonDatasObj->UserId) || !isset($jsonDatasObj->ConversationId)) {
             throw new ApiException("Missing required fields : UserId and ConversationId are required", 400);
         }
 

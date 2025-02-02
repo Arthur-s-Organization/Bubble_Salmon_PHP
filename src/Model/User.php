@@ -144,7 +144,7 @@ class User  implements JsonSerializable {
     {
         try
         {
-            $requete = BDD::getInstance()->prepare("INSERT INTO users (firstname,lastname,phone,birth_date, username, password, created_at, updated_at) VALUES (:firstname,:lastname,:phone,:birth_date, :username, :password, :created_at, :updated_at)");
+            $requete = BDD::getInstance()->prepare("INSERT INTO users (firstname,lastname,phone,birth_date, username, password, image_repository, image_file_name, created_at, updated_at) VALUES (:firstname,:lastname,:phone,:birth_date, :username, :password, :image_repository, :image_file_name, :created_at, :updated_at)");
 
             $requete->bindValue(':firstname', $user->getFirstname());
             $requete->bindValue(':lastname', $user->getLastname());
@@ -152,6 +152,8 @@ class User  implements JsonSerializable {
             $requete->bindValue(':birth_date', $user->getBirthDate()?->format('Y-m-d'));
             $requete->bindValue(':username', $user->getUsername());
             $requete->bindValue(':password', $user->getPassword());
+            $requete->bindValue(':image_repository', $user->getImageRepository());
+            $requete->bindValue(':image_file_name', $user->getImageFileName());
             $requete->bindValue(':created_at', $user->getCreatedAt()?->format('Y-m-d H:i:s'));
             $requete->bindValue(':updated_at', $user->getUpdatedAt()?->format('Y-m-d H:i:s'));
 

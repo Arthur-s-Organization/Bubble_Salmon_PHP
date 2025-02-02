@@ -151,9 +151,11 @@ class Conversation implements JsonSerializable {
     public static function SqlAdd(Conversation $conversation) {
 
         try {
-            $requete = BDD::getInstance()->prepare("INSERT INTO conversations (name, created_at, updated_at) VALUES (:name, :createdAt, :updatedAt)");
+            $requete = BDD::getInstance()->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
 
             $requete->bindValue(':name', $conversation->getName());
+            $requete->bindValue(':image_repository', $conversation->getImageRepository());
+            $requete->bindValue(':image_file_name', $conversation->getImageFileName());
             $requete->bindValue(':createdAt', $conversation->getCreatedAt()?->format('Y-m-d H:i:s'));
             $requete->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
 

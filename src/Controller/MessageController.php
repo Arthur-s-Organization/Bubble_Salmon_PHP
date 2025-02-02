@@ -36,8 +36,22 @@ class MessageController {
 
         $sqlRepository = null;
         $imageName = null;
-
         $now = new \DateTime();
+
+        if (isset($jsonDatasObj->Image)) {
+            $imageName = uniqid() . ".jpg";
+            //Fabriquer le répertoire d'accueil
+            $dateNow = new \DateTime();
+            $sqlRepository = $now->format('Y/m');
+            $repository = './uploads/images/' . $now->format('Y/m');
+            if (!is_dir($repository)) {
+                mkdir($repository, 0777, true);
+            }
+            //Fabriquer l'image
+            $ifp = fopen($repository . "/" . $imageName, "wb");
+            fwrite($ifp, base64_decode($jsonDatasObj->Image));
+            fclose($ifp);
+        }
 
         $message = new Message();
         $message->setUserId((int)$tokensDatas->id)
