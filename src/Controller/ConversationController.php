@@ -121,4 +121,57 @@ class ConversationController
         Conversation::SqlAddUser($userId, $conversationId);
         return json_encode(["status" => "success", "message" => "User $userId succesfuly add to conversation $conversationId"]);
     }
+
+
+    public function update(int $conversationId) {
+        if ($_SERVER["REQUEST_METHOD"] !== "PUT") {
+            throw new ApiException("Method PUT expected", 405);
+        }
+
+        JwtService::checkToken();
+
+        $jsonDatasStr = file_get_contents("php://input");
+        $jsonDatasObj = json_decode($jsonDatasStr);
+
+        if (empty($jsonDatasObj)) {
+            throw new ApiException("No data provided in the request body", 400);
+        }
+
+        // ici on récupére le path et le nom actuel de l'image
+        $oldSqlRepository = Conversation::getSqlImageRepository($conversationId);
+        $oldSqlImageName = Conversation::getSqlImageName($conversationId);
+
+        $sqlRepository = $oldSqlRepository;
+        $imageName = $oldSqlImageName;
+        $now = new \DateTime();
+
+        if (isset($jsonDatasObj->Image)) {
+            $imageName = uniqid() . ".jpg";
+            //Fabriquer le répertoire d'accueil
+            $dateNow = new \DateTime();
+            $sqlRepository = $now->format('Y/m');
+            $repository = './uploads/images/' . $now->format('Y/m');
+            if (!is_dir($repository)) {
+                mkdir($repository, 0777, true);
+            }
+            //Fabriquer l'image
+            $ifp = fopen($repository . "/" . $imageName, "wb");
+            fwrite($ifp, base64_decode($jsonDatasObj->Image));
+            fclose($ifp);
+            // implémenter la suppression de l'ancienne image si il y en a une
+            if (file_exists("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}")) {
+                unlink("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}");
+            }
+        }
+
+        $conversation = new Conversation();
+        $conversation->setId($conversationId)
+            ->setName($jsonDatasObj->Name)
+            ->setImageRepository($sqlRepository)
+            ->setImageFileName($imageName)
+            ->setUpdatedAt($now);
+
+       Conversation::SqlUpdate($conversation);
+        return json_encode(["status" => "success", "Message" => "Conversation successfully Updated", "conversationId" => $conversationId]);
+    }
 }
