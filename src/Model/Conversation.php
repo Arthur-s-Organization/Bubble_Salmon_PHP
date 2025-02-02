@@ -208,6 +208,51 @@ class Conversation implements JsonSerializable {
 
     }
 
+    public static function SqlUpdate(Conversation $conversation) {
+        try {
+            $requete = BDD::getInstance()->prepare("UPDATE conversations SET name =:name, image_repository = :image_repository,image_file_name = :image_file_name, updated_at = :updatedAt WHERE id = :id");
+
+            $requete->bindValue(':name', $conversation->getName());
+            $requete->bindValue(':image_repository', $conversation->getImageRepository());
+            $requete->bindValue(':image_file_name', $conversation->getImageFileName());
+            $requete->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $requete->bindValue(':id', $conversation->getId());
+
+            $requete->execute();
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function getSqlImageRepository($conversationId) {
+        try {
+            $requete = BDD::getInstance()->prepare("SELECT image_repository FROM conversations WHERE id = :conversationId");
+            $requete->bindValue(':conversationId', $conversationId);
+            $requete->execute();
+
+            $result = $requete->fetch(\PDO::FETCH_ASSOC);
+            return $result ? $result['image_repository'] : null;
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function getSqlImageName($conversationId) {
+        try {
+            $requete = BDD::getInstance()->prepare("SELECT image_file_name FROM conversations WHERE id = :conversationId");
+            $requete->bindValue(':conversationId', $conversationId);
+            $requete->execute();
+
+            $result = $requete->fetch(\PDO::FETCH_ASSOC);
+            return $result ? $result['image_file_name'] : null;
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
 
     public function jsonSerialize(): array
     {
