@@ -146,6 +146,5 @@ class UserController {
         $users = User::SqlGetFileredUsers($filter);
 
         return json_encode($users);
-
     }
 }

@@ -176,4 +176,17 @@ class ConversationController
        Conversation::SqlUpdate($conversation);
         return json_encode(["status" => "success", "Message" => "Conversation successfully Updated", "conversationId" => $conversationId]);
     }
+
+
+    public function search($filter) { // récupère la liste de toutes les conversations/utilisateurs correpondant à un critère de recherche
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
+        }
+
+        JwtService::checkToken();
+
+        $users = Conversation::SqlGetFileredUsers($filter);
+
+        return json_encode($users);
+    }
 }
