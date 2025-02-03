@@ -4,6 +4,7 @@
 namespace src\Model;
 
 use JsonSerializable;
+use Random\Engine\Secure;
 use src\Exception\ApiException;
 
 class User  implements JsonSerializable {
@@ -242,6 +243,42 @@ class User  implements JsonSerializable {
             return null;
         }
         catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function SqlGetFileredUsers(string $filter)
+    {
+        try
+        {
+            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username LIKE :filter");
+            $requete->bindValue(':filter', "%{$filter}%");
+            $requete->execute();
+
+            $sqlUsers = $requete->fetchAll(\PDO::FETCH_ASSOC);
+            if ($sqlUsers !== false)
+            {
+                $users = [];
+                foreach ($sqlUsers as $sqlUser)
+                {
+                    $user = new User();
+                    $user->setId($sqlUser["id"])
+                        ->setFirstname($sqlUser["firstname"])
+                        ->setLastname($sqlUser["lastname"])
+                        ->setphone($sqlUser["phone"])
+                        ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
+                        ->setUsername($sqlUser["username"])
+                        ->setImageRepository($sqlUser["image_repository"])
+                        ->setImageFileName($sqlUser["image_file_name"])
+                        ->setCreatedAt(new \DateTime($sqlUser["created_at"]))
+                        ->setupdatedAt(new \DateTime($sqlUser["updated_at"]));
+                    $users[] = $user;
+                }
+                return $users;
+            }
+        }
+        catch (\PDOException $e)
+        {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
     }

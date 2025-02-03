@@ -144,7 +144,7 @@ class UserController {
         JwtService::checkToken();
 
         $users = User::SqlGetFileredUsers($filter);
-        
+
         return json_encode($users);
 
     }
