@@ -159,8 +159,10 @@ class ConversationController
             fwrite($ifp, base64_decode($jsonDatasObj->Image));
             fclose($ifp);
             // implémenter la suppression de l'ancienne image si il y en a une
-            if (file_exists("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}")) {
-                unlink("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}");
+            if (!empty($oldSqlRepository) && !empty($oldSqlImageName)) {
+                if (file_exists("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}")) {
+                    unlink("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}");
+                }
             }
         }
 

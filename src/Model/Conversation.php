@@ -112,7 +112,11 @@ class Conversation implements JsonSerializable {
             foreach ($conversationsSql as $conversationSql) {
                 $conversation = new Conversation();
                 $conversation->setName($conversationSql["name"])
-                    ->setId($conversationSql["id"]);
+                    ->setId($conversationSql["id"])
+                    ->setImageRepository($conversationSql["image_repository"])
+                    ->setImageFileName($conversationSql["image_file_name"])
+                    ->setcreatedAt(new \DateTime($conversationSql["created_at"]))
+                    ->setupdatedAt(new \DateTime($conversationSql["updated_at"]));
                 $conversationsObject[] = $conversation;
             }
             return $conversationsObject;
@@ -137,6 +141,8 @@ class Conversation implements JsonSerializable {
                     ->setConversationId($messageSql["conversation_id"])
                     ->setUserId($messageSql["user_id"])
                     ->settext($messageSql["text"])
+                    ->setImageRepository($messageSql["image_repository"])
+                    ->setImageFileName($messageSql["image_file_name"])
                     ->setcreatedAt(new \DateTime($messageSql["created_at"]))
                     ->setupdatedAt(new \DateTime($messageSql["updated_at"]));
                 $messagesObject[] = $message;

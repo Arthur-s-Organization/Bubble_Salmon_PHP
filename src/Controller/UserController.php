@@ -135,4 +135,17 @@ class UserController {
 
         return json_encode($user);
     }
+
+    public function search($filter) { // récupère la liste de tous les users correpondant à un critère de recherche
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
+        }
+
+        JwtService::checkToken();
+
+        $users = User::SqlGetFileredUsers($filter);
+        
+        return json_encode($users);
+
+    }
 }

@@ -203,7 +203,11 @@ class User  implements JsonSerializable {
                         ->setLastname($sqlUser["lastname"])
                         ->setphone($sqlUser["phone"])
                         ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
-                        ->setUsername($sqlUser["username"]);
+                        ->setUsername($sqlUser["username"])
+                        ->setImageRepository($sqlUser["image_repository"])
+                        ->setImageFileName($sqlUser["image_file_name"])
+                        ->setCreatedAt(new \DateTime($sqlUser["created_at"]))
+                        ->setupdatedAt(new \DateTime($sqlUser["updated_at"]));
                     $users[] = $user;
                 }
                 return $users;
@@ -229,6 +233,8 @@ class User  implements JsonSerializable {
                     ->setphone($sqlUser["phone"])
                     ->setBirthDate(new \DateTime($sqlUser["birth_date"]))
                     ->setUsername($sqlUser["username"])
+                    ->setImageRepository($sqlUser["image_repository"])
+                    ->setImageFileName($sqlUser["image_file_name"])
                     ->setCreatedAt(new \DateTime($sqlUser["created_at"]))
                     ->setupdatedAt(new \DateTime($sqlUser["updated_at"]));
                 return $user;
