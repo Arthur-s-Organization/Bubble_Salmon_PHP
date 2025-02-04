@@ -122,6 +122,33 @@ class Message implements JsonSerializable{
         }
     }
 
+    public static function SqlGetAllByConversationId(int $conversationId) {
+        try {
+            $requete = BDD::getInstance()->prepare('SELECT * FROM messages WHERE conversation_id = :conversationId ORDER BY created_at desc');
+            $requete->bindValue(':conversationId', $conversationId);
+            $requete->execute();
+            $messagesSql = $requete->fetchall(\PDO::FETCH_ASSOC);
+
+            $messagesObject = [];
+            foreach ($messagesSql as $messageSql) {
+                $message = new Message();
+                $message->setId($messageSql["id"])
+                    ->setConversationId($messageSql["conversation_id"])
+                    ->setUserId($messageSql["user_id"])
+                    ->settext($messageSql["text"])
+                    ->setImageRepository($messageSql["image_repository"])
+                    ->setImageFileName($messageSql["image_file_name"])
+                    ->setcreatedAt(new \DateTime($messageSql["created_at"]))
+                    ->setupdatedAt(new \DateTime($messageSql["updated_at"]));
+                $messagesObject[] = $message;
+            }
+            return $messagesObject;
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
     public function jsonSerialize(): array
     {
         return [

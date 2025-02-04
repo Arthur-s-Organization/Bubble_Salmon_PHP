@@ -3,6 +3,7 @@
 namespace src\Controller;
 
 use src\Exception\ApiException;
+use src\Model\Conversation;
 use src\Model\Message;
 use src\Service\JwtService;
 
@@ -64,5 +65,17 @@ class MessageController {
 
         $id = Message::SqlAdd($message);
         return json_encode(["code" => 0, "Message" => "Message ajouté avec succès", "Id" => $id]);
+    }
+
+    public function getAll(int $conversationId) // récupére tous les messages d'une conversation avec son id
+    {
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
+        }
+
+        JwtService::checkToken();
+
+        $messages = Message::SqlGetAllByConversationId($conversationId);
+        return json_encode($messages);
     }
 }

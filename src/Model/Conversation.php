@@ -259,6 +259,38 @@ class Conversation implements JsonSerializable {
         }
     }
 
+    public static function SqlGetFileredConversations(string $filter) // pb ! on renvoie juste les conversations et pas les noms des users
+    {
+        try
+        {
+            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username LIKE :filter");
+            $requete->bindValue(':filter', "%{$filter}%");
+            $requete->execute();
+
+            $sqlConversations = $requete->fetchAll(\PDO::FETCH_ASSOC);
+            if ($sqlConversations !== false)
+            {
+                $conversations = [];
+                foreach ($sqlConversations as $sqlConversation)
+                {
+                    $conversation = new Conversation();
+                    $conversation->setId($sqlConversation['id'])
+                        ->setName($sqlConversation['name'])
+                        ->setImageRepository($sqlConversation["image_repository"])
+                        ->setImageFileName($sqlConversation["image_file_name"])
+                        ->setCreatedAt(new \DateTime($sqlConversation["created_at"]))
+                        ->setupdatedAt(new \DateTime($sqlConversation["updated_at"]));
+                    $conversations[] = $conversation;
+                }
+                return $conversations;
+            }
+        }
+        catch (\PDOException $e)
+        {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
 
     public function jsonSerialize(): array
     {
