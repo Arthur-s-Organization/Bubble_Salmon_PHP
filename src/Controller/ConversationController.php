@@ -28,15 +28,17 @@ class ConversationController
     }
 
 
-    public function show(int $id) // récupére tous les messages d'une conversation
+    public function show(int $conversationId) // récupère toutes les infos d'une conversation avec son nom si conv de groupe et avec le nom du dest si conversation à deux
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
         }
 
-        JwtService::checkToken();
+        $tokensDatas = JwtService::checkToken();
+        $username = (string)$tokensDatas->username;
+//        $username = 'Nico';
 
-        $conversation = Conversation::SqlGetById($id);
+        $conversation = Conversation::SqlGetById($conversationId, $username);
         return json_encode($conversation);
     }
 
