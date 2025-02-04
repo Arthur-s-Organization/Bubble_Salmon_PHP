@@ -28,15 +28,17 @@ class ConversationController
     }
 
 
-    public function show(int $id) // récupére tous les messages d'une conversation
+    public function show(int $conversationId) // récupère toutes les infos d'une conversation avec son nom si conv de groupe et avec le nom du dest si conversation à deux
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
         }
 
-        JwtService::checkToken();
+        $tokensDatas = JwtService::checkToken();
+        $username = (string)$tokensDatas->username;
+//        $username = 'Nico';
 
-        $conversation = Conversation::SqlGetById($id);
+        $conversation = Conversation::SqlGetById($conversationId, $username);
         return json_encode($conversation);
     }
 
@@ -159,8 +161,10 @@ class ConversationController
             fwrite($ifp, base64_decode($jsonDatasObj->Image));
             fclose($ifp);
             // implémenter la suppression de l'ancienne image si il y en a une
-            if (file_exists("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}")) {
-                unlink("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}");
+            if (!empty($oldSqlRepository) && !empty($oldSqlImageName)) {
+                if (file_exists("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}")) {
+                    unlink("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}");
+                }
             }
         }
 
@@ -173,5 +177,18 @@ class ConversationController
 
        Conversation::SqlUpdate($conversation);
         return json_encode(["status" => "success", "Message" => "Conversation successfully Updated", "conversationId" => $conversationId]);
+    }
+
+
+    public function search($filter) { // récupère la liste de toutes les conversations/utilisateurs correpondant à un critère de recherche
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
+        }
+
+        JwtService::checkToken();
+
+        $users = Conversation::SqlGetFileredUsers($filter);
+
+        return json_encode($users);
     }
 }
