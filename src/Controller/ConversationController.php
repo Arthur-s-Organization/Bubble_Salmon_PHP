@@ -15,7 +15,7 @@ class ConversationController
     }
 
 
-    public function getAll() // récupère toutes les conversations de l'utilisateur (sans le dernier message de chaque conv pour l'instant)
+    public function getAll() // récupère toutes les conversations de l'utilisateur (nom de la conv ou nom du desti suivant le type de conv) (sans le dernier message de chaque conv pour l'instant)
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
@@ -28,7 +28,7 @@ class ConversationController
     }
 
 
-    public function show(int $conversationId) // récupère toutes les infos d'une conversation avec son nom si conv de groupe et avec le nom du dest si conversation à deux
+    public function show(int $conversationId) // récupère toutes les infos d'une conversation avec son nom si conv de groupe et avec le nom du dest si conversation à deux (penser à implémenter vérif que si la conversation demandée n'appartient pas à l'utilsateur on lance une erreur)
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
@@ -36,8 +36,9 @@ class ConversationController
 
         $tokensDatas = JwtService::checkToken();
         $username = (string)$tokensDatas->username;
+        $userId = (int)$tokensDatas->id;
 
-        $conversation = Conversation::SqlGetById($conversationId, $username);
+        $conversation = Conversation::SqlGetById($conversationId, $username, $userId);
         return json_encode($conversation);
     }
 
