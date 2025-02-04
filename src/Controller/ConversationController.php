@@ -23,7 +23,7 @@ class ConversationController
 
         $tokensDatas = JwtService::checkToken();
 
-        $conversations = Conversation::SqlGetAllbyUserId((int)$tokensDatas->id);
+        $conversations = Conversation::SqlGetAllbyUserId((int)$tokensDatas->id, $tokensDatas->username);
         return json_encode($conversations);
     }
 
@@ -36,7 +36,6 @@ class ConversationController
 
         $tokensDatas = JwtService::checkToken();
         $username = (string)$tokensDatas->username;
-//        $username = 'Nico';
 
         $conversation = Conversation::SqlGetById($conversationId, $username);
         return json_encode($conversation);

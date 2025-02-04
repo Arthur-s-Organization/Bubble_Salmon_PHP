@@ -101,17 +101,37 @@ class Conversation implements JsonSerializable {
 //        }
 //    }
 
-    public static function SqlGetAllbyUserId(int $userId) {
+    public static function SqlGetAllbyUserId(int $userId, string $username) {
         try {
-            $requete = BDD::getInstance()->prepare('SELECT * FROM conversations c JOIN conversations_users cu ON c.id = cu.conversation_id WHERE cu.user_id = :userId');
+//            $requete = BDD::getInstance()->prepare('SELECT * FROM conversations c JOIN conversations_users cu ON c.id = cu.conversation_id WHERE cu.user_id = :userId');
+            $requete = BDD::getInstance()->prepare("  
+            SELECT 
+              DISTINCT
+                c.id,
+                CASE 
+                    WHEN LENGTH(c.name)>1 THEN c.name
+                    ELSE u.username
+                END conversations_name,
+                c.image_repository,
+                c.image_file_name,
+                c.created_at,
+                c.updated_at
+              FROM conversations c
+              JOIN conversations_users cu on c.id = cu.conversation_id
+              JOIN users u on cu.user_id = u.id
+              WHERE u.username not like :username
+                        AND c.id IN (SELECT id FROM conversations c2 join conversations_users cu2 ON c2.id = cu2.conversation_id WHERE cu2.user_id = :userId)
+            ");
+
             $requete->bindValue(':userId', $userId);
+            $requete->bindValue(':username', $username);
             $requete->execute();
 
             $conversationsSql = $requete->fetchAll(\PDO::FETCH_ASSOC);
             $conversationsObject = [];
             foreach ($conversationsSql as $conversationSql) {
                 $conversation = new Conversation();
-                $conversation->setName($conversationSql["name"])
+                $conversation->setName($conversationSql["conversations_name"])
                     ->setId($conversationSql["id"])
                     ->setImageRepository($conversationSql["image_repository"])
                     ->setImageFileName($conversationSql["image_file_name"])
