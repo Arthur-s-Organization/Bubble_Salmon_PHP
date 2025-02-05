@@ -224,10 +224,12 @@ class Conversation implements JsonSerializable {
         }
     }
 
-    public static function SqlAdd(Conversation $conversation) {
+    public static function SqlAdd(Conversation $conversation, int $userId, int $recipientId) { // ajout de la logique de vérification pour ne pas créer de coonv redondante
 
         try {
-            $requete = BDD::getInstance()->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
+            $db = BDD::getInstance();
+            // création de la conversation
+            $requete = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
 
             $requete->bindValue(':name', $conversation->getName());
             $requete->bindValue(':image_repository', $conversation->getImageRepository());
@@ -236,7 +238,21 @@ class Conversation implements JsonSerializable {
             $requete->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
             $requete->execute();
-            return BDD::getInstance()->lastInsertId();
+            $lastConversationId =  BDD::getInstance()->lastInsertId();
+
+            // ajout de l'utilisateur connecté à la conv
+            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $requete->bindValue(':conversationId', $lastConversationId);
+            $requete->bindValue(':userId', $userId);
+            $requete->execute();
+
+            // ajout du destinataire à la conv
+            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $requete->bindValue(':conversationId', $lastConversationId);
+            $requete->bindValue(':userId', $recipientId);
+            $requete->execute();
+
+            return $lastConversationId;
         }
         catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
