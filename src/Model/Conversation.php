@@ -13,6 +13,18 @@ class Conversation implements JsonSerializable {
     private ?string $imageFileName = null;
     private ?\DateTime $createdAt = null;
     private ?\DateTime $updatedAt = null;
+    private ?Message $lastMessage = null;
+
+    public function getLastMessage(): ?Message
+    {
+        return $this->lastMessage;
+    }
+
+    public function setLastMessage(?Message $lastMessage): Conversation
+    {
+        $this->lastMessage = $lastMessage;
+        return $this;
+    }
 
     public function getId(): ?int
     {
@@ -115,10 +127,19 @@ class Conversation implements JsonSerializable {
                 c.image_repository,
                 c.image_file_name,
                 c.created_at,
-                c.updated_at
+                c.updated_at,
+                m_last.text AS last_message,
+                m_last.created_at AS last_message_date
+                
               FROM conversations c
               JOIN conversations_users cu on c.id = cu.conversation_id
               JOIN users u on cu.user_id = u.id
+              LEFT JOIN messages m_last ON c.id = m_last.conversation_id 
+                        AND m_last.created_at = (
+                            SELECT MAX(m.created_at) 
+                            FROM messages m 
+                            WHERE m.conversation_id = c.id
+                        )
               WHERE u.username not like :username
                         AND c.id IN (SELECT id FROM conversations c2 join conversations_users cu2 ON c2.id = cu2.conversation_id WHERE cu2.user_id = :userId)
             ");
@@ -130,13 +151,19 @@ class Conversation implements JsonSerializable {
             $conversationsSql = $requete->fetchAll(\PDO::FETCH_ASSOC);
             $conversationsObject = [];
             foreach ($conversationsSql as $conversationSql) {
+
+                $lastMessage = new Message();
+                $lastMessage->setText($conversationSql['last_message'])
+                    ->setCreatedAt($conversationSql['last_message_date'] ? new \DateTime($conversationSql['last_message_date']) : null);
+
                 $conversation = new Conversation();
                 $conversation->setName($conversationSql["conversations_name"])
                     ->setId($conversationSql["id"])
                     ->setImageRepository($conversationSql["image_repository"])
                     ->setImageFileName($conversationSql["image_file_name"])
                     ->setcreatedAt(new \DateTime($conversationSql["created_at"]))
-                    ->setupdatedAt(new \DateTime($conversationSql["updated_at"]));
+                    ->setupdatedAt(new \DateTime($conversationSql["updated_at"]))
+                    ->setLastMessage($lastMessage);
                 $conversationsObject[] = $conversation;
             }
             return $conversationsObject;
@@ -147,8 +174,16 @@ class Conversation implements JsonSerializable {
 
     }
 
-    public static function SqlGetById(int $conversationId, string $username) {
+    public static function SqlGetById(int $conversationId, string $username, int $userId) {
         try {
+            // Vérifie si l'association existe bien
+            $associationCheck = BDD::getInstance()->prepare('SELECT COUNT(*) FROM conversations_users WHERE conversation_id = :conversationId AND user_id = :userId');
+            $associationCheck->bindValue(':conversationId', $conversationId);
+            $associationCheck->bindValue(':userId', $userId);
+            $associationCheck->execute();
+            if ($associationCheck->fetchColumn() < 1) {
+                throw new ApiException("User {$userId} doesn't belongs to conversation {$conversationId}", 409);
+            }
 //            $requete = BDD::getInstance()->prepare('SELECT * FROM conversations WHERE id = :id');
             $requete = BDD::getInstance()->prepare("
                 SELECT 
@@ -189,10 +224,12 @@ class Conversation implements JsonSerializable {
         }
     }
 
-    public static function SqlAdd(Conversation $conversation) {
+    public static function SqlAdd(Conversation $conversation, int $userId, int $recipientId) { // ajout de la logique de vérification pour ne pas créer de coonv redondante
 
         try {
-            $requete = BDD::getInstance()->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
+            $db = BDD::getInstance();
+            // création de la conversation
+            $requete = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
 
             $requete->bindValue(':name', $conversation->getName());
             $requete->bindValue(':image_repository', $conversation->getImageRepository());
@@ -201,7 +238,21 @@ class Conversation implements JsonSerializable {
             $requete->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
             $requete->execute();
-            return BDD::getInstance()->lastInsertId();
+            $lastConversationId =  BDD::getInstance()->lastInsertId();
+
+            // ajout de l'utilisateur connecté à la conv
+            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $requete->bindValue(':conversationId', $lastConversationId);
+            $requete->bindValue(':userId', $userId);
+            $requete->execute();
+
+            // ajout du destinataire à la conv
+            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $requete->bindValue(':conversationId', $lastConversationId);
+            $requete->bindValue(':userId', $recipientId);
+            $requete->execute();
+
+            return $lastConversationId;
         }
         catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
@@ -335,7 +386,8 @@ class Conversation implements JsonSerializable {
             "imageRepository" => $this->getImageRepository(),
             "imageFileName" => $this->getImageFileName(),
             "createdAt" => $this->getCreatedAt()?->format("Y-m-d H:i:s"),
-            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d H:i:s")
+            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d H:i:s"),
+            "last_message" => $this->getLastMessage()
         ];
     }
 
