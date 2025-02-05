@@ -31,8 +31,8 @@ class MessageController {
             throw new ApiException("No data provided in the request body", 400);
         }
 
-        if (!isset($jsonDatasObj->ConversationId) || !isset($jsonDatasObj->Text)){
-            throw new ApiException("Missing required fields : ConversationId and Text are required", 400);
+        if (!isset($jsonDatasObj->ConversationId)){
+            throw new ApiException("Missing required fields : ConversationId is required", 400);
         }
 
         $sqlRepository = null;
