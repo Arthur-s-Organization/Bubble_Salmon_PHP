@@ -43,60 +43,60 @@ class ConversationController
     }
 
 
-    public function addold() // créé une nouvelle conversation (sans utilisateur pour l'instant)
-    {
-        if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-            throw new ApiException("Method POST expected", 405);
-        }
-
-        JwtService::checkToken();
-
-        $jsonDatasStr = file_get_contents("php://input");
-        $jsonDatasObj = json_decode($jsonDatasStr);
-
-        if (empty($jsonDatasObj)) {
-            throw new ApiException("No data provided in the request body", 400);
-        }
-
-        if (!isset($jsonDatasObj->Name)) {
-            throw new ApiException("Missing required fields : Name is required", 400);
-        }
-
-//        if (!isset($jsonDatasObj->Image)) {
-//            throw new ApiException("Missing required fields : Image is required", 400);
+//    public function addold() // créé une nouvelle conversation (sans utilisateur pour l'instant)
+//    {
+//        if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+//            throw new ApiException("Method POST expected", 405);
 //        }
+//
+//        JwtService::checkToken();
+//
+//        $jsonDatasStr = file_get_contents("php://input");
+//        $jsonDatasObj = json_decode($jsonDatasStr);
+//
+//        if (empty($jsonDatasObj)) {
+//            throw new ApiException("No data provided in the request body", 400);
+//        }
+//
+//        if (!isset($jsonDatasObj->Name)) {
+//            throw new ApiException("Missing required fields : Name is required", 400);
+//        }
+//
+////        if (!isset($jsonDatasObj->Image)) {
+////            throw new ApiException("Missing required fields : Image is required", 400);
+////        }
+//
+//        $sqlRepository = null;
+//        $imageName = null;
+//        $now = new \DateTime();
+//
+//        if (isset($jsonDatasObj->Image)) {
+//            $imageName = uniqid() . ".jpg";
+//            //Fabriquer le répertoire d'accueil
+//            $dateNow = new \DateTime();
+//            $sqlRepository = $now->format('Y/m');
+//            $repository = './uploads/images/' . $now->format('Y/m');
+//            if (!is_dir($repository)) {
+//                mkdir($repository, 0777, true);
+//            }
+//            //Fabriquer l'image
+//            $ifp = fopen($repository . "/" . $imageName, "wb");
+//            fwrite($ifp, base64_decode($jsonDatasObj->Image));
+//            fclose($ifp);
+//        }
+//
+//        $conversation = new Conversation();
+//        $conversation->setName($jsonDatasObj->Name)
+//            ->setImageRepository($sqlRepository)
+//            ->setImageFileName($imageName)
+//            ->setCreatedAt($now)
+//            ->setUpdatedAt($now);
+//
+//        $conversationId = Conversation::SqlAdd($conversation);
+//        return json_encode(["status" => "success", "Message" => "Conversation successfully added", "conversationId" => $conversationId]);
+//    }
 
-        $sqlRepository = null;
-        $imageName = null;
-        $now = new \DateTime();
-
-        if (isset($jsonDatasObj->Image)) {
-            $imageName = uniqid() . ".jpg";
-            //Fabriquer le répertoire d'accueil
-            $dateNow = new \DateTime();
-            $sqlRepository = $now->format('Y/m');
-            $repository = './uploads/images/' . $now->format('Y/m');
-            if (!is_dir($repository)) {
-                mkdir($repository, 0777, true);
-            }
-            //Fabriquer l'image
-            $ifp = fopen($repository . "/" . $imageName, "wb");
-            fwrite($ifp, base64_decode($jsonDatasObj->Image));
-            fclose($ifp);
-        }
-
-        $conversation = new Conversation();
-        $conversation->setName($jsonDatasObj->Name)
-            ->setImageRepository($sqlRepository)
-            ->setImageFileName($imageName)
-            ->setCreatedAt($now)
-            ->setUpdatedAt($now);
-
-        $conversationId = Conversation::SqlAdd($conversation);
-        return json_encode(["status" => "success", "Message" => "Conversation successfully added", "conversationId" => $conversationId]);
-    }
-
-    public function add() // créé une nouvelle conversation à deux (utilisateur connecté plsu un autre)
+    public function add() // créé une nouvelle conversation à deux (utilisateur connecté plus un autre)
     {
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             throw new ApiException("Method POST expected", 405);
@@ -148,6 +148,62 @@ class ConversationController
             ->setUpdatedAt($now);
 
         $conversationId = Conversation::SqlAdd($conversation, $userId, $recipentId);
+        return json_encode(["status" => "success", "Message" => "Conversation successfully added", "conversationId" => $conversationId]);
+    }
+
+
+    public function addGroup() // créé une nouvelle conversation à plusieurs (utilisateur connecté plus les autres)
+    {
+        if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+            throw new ApiException("Method POST expected", 405);
+        }
+
+        $tokensDatas = JwtService::checkToken();
+        $userId = (int)$tokensDatas->id;
+
+        $jsonDatasStr = file_get_contents("php://input");
+        $jsonDatasObj = json_decode($jsonDatasStr);
+
+        if (empty($jsonDatasObj)) {
+            throw new ApiException("No data provided in the request body", 400);
+        }
+
+        if (!isset($jsonDatasObj->Name) || !isset($jsonDatasObj->RecipientIds)){
+            throw new ApiException("Missing required fields : RecipientIds is required", 400);
+        }
+
+//        if (!isset($jsonDatasObj->Image)) {
+//            throw new ApiException("Missing required fields : Image is required", 400);
+//        }
+        $recipentsIds = $jsonDatasObj->RecipientIds;
+
+        $sqlRepository = null;
+        $imageName = null;
+        $now = new \DateTime();
+
+        if (isset($jsonDatasObj->Image)) {
+            $imageName = uniqid() . ".jpg";
+            //Fabriquer le répertoire d'accueil
+            $dateNow = new \DateTime();
+            $sqlRepository = $now->format('Y/m');
+            $repository = './uploads/images/' . $now->format('Y/m');
+            if (!is_dir($repository)) {
+                mkdir($repository, 0777, true);
+            }
+            //Fabriquer l'image
+            $ifp = fopen($repository . "/" . $imageName, "wb");
+            fwrite($ifp, base64_decode($jsonDatasObj->Image));
+            fclose($ifp);
+        }
+
+        $conversation = new Conversation();
+        $conversation->setName($jsonDatasObj->Name)
+            ->setImageRepository($sqlRepository)
+            ->setImageFileName($imageName)
+            ->setCreatedAt($now)
+            ->setUpdatedAt($now);
+
+        $conversationId = Conversation::SqlAddGroup($conversation, $recipentsIds, $userId);
         return json_encode(["status" => "success", "Message" => "Conversation successfully added", "conversationId" => $conversationId]);
     }
 

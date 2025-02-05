@@ -14,7 +14,7 @@ class JwtService
     {
         $issuedAt = new \DateTimeImmutable();
 
-        $expire = $issuedAt->modify('+16 minutes')->getTimestamp();
+        $expire = $issuedAt->modify('+60 minutes')->getTimestamp();
         $serverName = "cesi.local";
 
         $data = [
