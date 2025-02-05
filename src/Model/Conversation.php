@@ -126,8 +126,14 @@ class Conversation implements JsonSerializable
                     WHEN LENGTH(c.name)>1 THEN c.name
                     ELSE u.username
                 END conversations_name,
-                c.image_repository,
-                c.image_file_name,
+                CASE 
+                    WHEN LENGTH(c.name)>1 THEN c.image_repository
+                    ELSE u.image_repository
+                END image_repository,
+                CASE 
+                    WHEN LENGTH(c.name)>1 THEN c.image_file_name
+                    ELSE u.image_file_name
+                END image_file_name,
                 c.created_at,
                 c.updated_at,
                 m_last.text AS last_message,
