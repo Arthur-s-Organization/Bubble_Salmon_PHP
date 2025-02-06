@@ -297,7 +297,7 @@ class Conversation implements JsonSerializable
     }
 
     public static function SqlAddGroup(Conversation $conversation, array $recipentIds, int $userId)
-    { // penser ajout de la logique de vérification pour ne pas créer de coonv redondante
+    { // penser ajout de la logique de vérification pour ne pas créer de conv redondante
 
         try {
             $db = BDD::getInstance();

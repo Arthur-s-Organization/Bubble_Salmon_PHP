@@ -191,7 +191,7 @@ class User  implements JsonSerializable {
 
     public static function SqlGetAll() {
         try {
-            $query = BDD::getInstance()->prepare("SELECT * FROM users");
+            $query = BDD::getInstance()->prepare("SELECT * FROM users ORDER BY username asc");
             $query->execute();
 
             $sqlUsers = $query->fetchAll(\PDO::FETCH_ASSOC);
