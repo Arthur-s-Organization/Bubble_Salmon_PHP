@@ -250,11 +250,11 @@ class Conversation implements JsonSerializable
             $db = BDD::getInstance();
 
             // Vérifie si le destinataire existe
-            $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :userId');
-            $userCheck->bindValue(':userId', $userId);
+            $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :recipientId');
+            $userCheck->bindValue(':recipientId', $recipientId);
             $userCheck->execute();
             if ($userCheck->fetchColumn() === 0) {
-                throw new ApiException("UserId {$userId} doesn''t exist", 404);
+                throw new ApiException("UserId {$recipientId} doesn''t exist", 404);
             }
 
             // Vérifie si une association existe déjà : à implémenter !
@@ -414,20 +414,54 @@ class Conversation implements JsonSerializable
 
     public static function exists($userId1, $userId2) : bool
     {
-        // Vérifie si une association existe déjà
-        $associationCheck = BDD::getInstance()->prepare('
-            SELECT COUNT(*) 
-            FROM conversations_users 
-            WHERE user_id = :user1 
-            AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
-        ');
-        $associationCheck->bindValue(':user1', $userId1);
-        $associationCheck->bindValue(':user2', $userId2);
-        $associationCheck->execute();
-        if ($associationCheck->fetchColumn() > 0) {
-            return true;
+        try {
+            // Vérifie si une association existe déjà
+            $associationCheck = BDD::getInstance()->prepare('
+                SELECT COUNT(*) 
+                FROM conversations_users cu
+                JOIN conversations c
+                    on cu.conversation_id = c.id
+                WHERE 
+                    user_id = :user1
+                    AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
+                    AND (LENGTH(c.name) is null or LENGTH(c.name)<1)
+            ');
+            $associationCheck->bindValue(':user1', $userId1);
+            $associationCheck->bindValue(':user2', $userId2);
+            $associationCheck->execute();
+            if ($associationCheck->fetchColumn() > 0) {
+                return true;
+            }
+            return false;
         }
-        return false;
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function SqlGetIdByUsersId(int $userId1, int $userId2)
+    {
+        try {
+            $requete = BDD::getInstance()->prepare('
+                SELECT c.id
+                FROM conversations_users cu
+                JOIN conversations c
+                    on cu.conversation_id = c.id
+                WHERE 
+                    user_id = :user1
+                    AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
+                    AND (LENGTH(c.name) is null or LENGTH(c.name)<1)
+            ');
+            $requete->bindValue(':user1', $userId1);
+            $requete->bindValue(':user2', $userId2);
+            $requete->execute();
+
+            $result = $requete->fetch(\PDO::FETCH_ASSOC);
+            return $result['id'];
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
     }
 
     public static function getSqlImageRepository($conversationId)
