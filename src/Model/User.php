@@ -145,20 +145,20 @@ class User  implements JsonSerializable {
     {
         try
         {
-            $requete = BDD::getInstance()->prepare("INSERT INTO users (firstname,lastname,phone,birth_date, username, password, image_repository, image_file_name, created_at, updated_at) VALUES (:firstname,:lastname,:phone,:birth_date, :username, :password, :image_repository, :image_file_name, :created_at, :updated_at)");
+            $query = BDD::getInstance()->prepare("INSERT INTO users (firstname,lastname,phone,birth_date, username, password, image_repository, image_file_name, created_at, updated_at) VALUES (:firstname,:lastname,:phone,:birth_date, :username, :password, :image_repository, :image_file_name, :created_at, :updated_at)");
 
-            $requete->bindValue(':firstname', $user->getFirstname());
-            $requete->bindValue(':lastname', $user->getLastname());
-            $requete->bindValue(':phone', $user->getPhone());
-            $requete->bindValue(':birth_date', $user->getBirthDate()?->format('Y-m-d'));
-            $requete->bindValue(':username', $user->getUsername());
-            $requete->bindValue(':password', $user->getPassword());
-            $requete->bindValue(':image_repository', $user->getImageRepository());
-            $requete->bindValue(':image_file_name', $user->getImageFileName());
-            $requete->bindValue(':created_at', $user->getCreatedAt()?->format('Y-m-d H:i:s'));
-            $requete->bindValue(':updated_at', $user->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':firstname', $user->getFirstname());
+            $query->bindValue(':lastname', $user->getLastname());
+            $query->bindValue(':phone', $user->getPhone());
+            $query->bindValue(':birth_date', $user->getBirthDate()?->format('Y-m-d'));
+            $query->bindValue(':username', $user->getUsername());
+            $query->bindValue(':password', $user->getPassword());
+            $query->bindValue(':image_repository', $user->getImageRepository());
+            $query->bindValue(':image_file_name', $user->getImageFileName());
+            $query->bindValue(':created_at', $user->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':updated_at', $user->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
-            $requete->execute();
+            $query->execute();
             return BDD::getInstance()?->lastInsertId();
         }
         catch (\PDOException $e) {
@@ -170,11 +170,11 @@ class User  implements JsonSerializable {
 
         try
         {
-            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username = :username");
-            $requete->bindValue(':username', $username);
-            $requete->execute();
+            $query = BDD::getInstance()->prepare("SELECT * FROM users WHERE username = :username");
+            $query->bindValue(':username', $username);
+            $query->execute();
 
-            $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
+            $sqlUser = $query->fetch(\PDO::FETCH_ASSOC);
             if ($sqlUser !== false) {
                 $user = new User();
                 $user->setId($sqlUser["id"])
@@ -191,10 +191,10 @@ class User  implements JsonSerializable {
 
     public static function SqlGetAll() {
         try {
-            $requete = BDD::getInstance()->prepare("SELECT * FROM users");
-            $requete->execute();
+            $query = BDD::getInstance()->prepare("SELECT * FROM users");
+            $query->execute();
 
-            $sqlUsers = $requete->fetchAll(\PDO::FETCH_ASSOC);
+            $sqlUsers = $query->fetchAll(\PDO::FETCH_ASSOC);
             if ($sqlUsers !== false) {
                 $users = [];
                 foreach ($sqlUsers as $sqlUser) {
@@ -221,11 +221,11 @@ class User  implements JsonSerializable {
 
     public static function SqlGetById(int $userId) {
         try {
-            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE id = :id");
-            $requete->bindValue(':id', $userId);
-            $requete->execute();
+            $query = BDD::getInstance()->prepare("SELECT * FROM users WHERE id = :id");
+            $query->bindValue(':id', $userId);
+            $query->execute();
 
-            $sqlUser = $requete->fetch(\PDO::FETCH_ASSOC);
+            $sqlUser = $query->fetch(\PDO::FETCH_ASSOC);
             if ($sqlUser !== false) {
                 $user = new User();
                 $user->setId($sqlUser["id"])
@@ -251,11 +251,11 @@ class User  implements JsonSerializable {
     {
         try
         {
-            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username LIKE :filter");
-            $requete->bindValue(':filter', "%{$filter}%");
-            $requete->execute();
+            $query = BDD::getInstance()->prepare("SELECT * FROM users WHERE username LIKE :filter");
+            $query->bindValue(':filter', "%{$filter}%");
+            $query->execute();
 
-            $sqlUsers = $requete->fetchAll(\PDO::FETCH_ASSOC);
+            $sqlUsers = $query->fetchAll(\PDO::FETCH_ASSOC);
             if ($sqlUsers !== false)
             {
                 $users = [];

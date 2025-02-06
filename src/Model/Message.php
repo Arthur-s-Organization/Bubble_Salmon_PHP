@@ -104,17 +104,17 @@ class Message implements JsonSerializable{
 
     public static function SqlAdd(Message $message){
         try {
-            $requete = BDD::getInstance()->prepare("INSERT INTO messages (user_id, conversation_id, text, image_repository, image_file_name, created_at, updated_at) VALUES (:user_id, :conversation_id, :text, :image_repository, :image_file_name, :created_at, :updated_at)");
+            $query = BDD::getInstance()->prepare("INSERT INTO messages (user_id, conversation_id, text, image_repository, image_file_name, created_at, updated_at) VALUES (:user_id, :conversation_id, :text, :image_repository, :image_file_name, :created_at, :updated_at)");
 
-            $requete->bindValue(':user_id', $message->getUserId());
-            $requete->bindValue(':conversation_id', $message->getConversationId());
-            $requete->bindValue(':text', $message->getText());
-            $requete->bindValue(':image_repository', $message->getImageRepository());
-            $requete->bindValue(':image_file_name', $message->getImageFileName());
-            $requete->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
-            $requete->bindValue(':updated_at', $message->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':user_id', $message->getUserId());
+            $query->bindValue(':conversation_id', $message->getConversationId());
+            $query->bindValue(':text', $message->getText());
+            $query->bindValue(':image_repository', $message->getImageRepository());
+            $query->bindValue(':image_file_name', $message->getImageFileName());
+            $query->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':updated_at', $message->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
-            $requete->execute();
+            $query->execute();
             return BDD::getInstance()->lastInsertId();
         }
         catch (\PDOException $e) {
@@ -124,10 +124,10 @@ class Message implements JsonSerializable{
 
     public static function SqlGetAllByConversationId(int $conversationId) {
         try {
-            $requete = BDD::getInstance()->prepare('SELECT * FROM messages WHERE conversation_id = :conversationId ORDER BY created_at desc');
-            $requete->bindValue(':conversationId', $conversationId);
-            $requete->execute();
-            $messagesSql = $requete->fetchall(\PDO::FETCH_ASSOC);
+            $query = BDD::getInstance()->prepare('SELECT * FROM messages WHERE conversation_id = :conversationId ORDER BY created_at desc');
+            $query->bindValue(':conversationId', $conversationId);
+            $query->execute();
+            $messagesSql = $query->fetchall(\PDO::FETCH_ASSOC);
 
             $messagesObject = [];
             foreach ($messagesSql as $messageSql) {
