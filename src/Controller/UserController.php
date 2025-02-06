@@ -136,6 +136,21 @@ class UserController {
         return json_encode($user);
     }
 
+    public function getById(int $userId)
+    {
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
+        }
+        JwtService::checkToken();
+
+        $user = User::SqlGetById($userId);
+        if($user === null) {
+            throw new ApiException("User not found in our system. Please check your credentials and try again.", 403);
+        }
+
+        return json_encode($user);
+    }
+
     public function search($filter) { // récupère la liste de tous les users correpondant à un critère de recherche
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
