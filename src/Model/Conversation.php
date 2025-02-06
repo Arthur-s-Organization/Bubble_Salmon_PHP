@@ -107,48 +107,57 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlGetAllbyUserId(int $userId, string $username)
+    public static function SqlGetAllbyUserId(int $userId, string $username) // rajouter le case 1 conv à 1
     {
         try {
             $query = BDD::getInstance()->prepare("  
-            SELECT 
-              DISTINCT
-                c.id,
-                CASE 
-                    WHEN LENGTH(c.name)>1 THEN c.name
-                    ELSE u.username
-                END conversations_name,
-                CASE 
-                    WHEN LENGTH(c.name)>1 THEN c.image_repository
-                    ELSE u.image_repository
-                END image_repository,
-                CASE 
-                    WHEN LENGTH(c.name)>1 THEN c.image_file_name
-                    ELSE u.image_file_name
-                END image_file_name,
-                c.created_at,
-                c.updated_at,
-                c.type,
-                m_last.id AS last_message_id,
-                m_last.text AS last_message,
-                m_last.conversation_id AS last_message_conversation_id,
-                m_last.user_id AS last_message_user_id,
-                m_last.image_repository AS last_message_image_repository,
-                m_last.image_file_name AS last_message_image_file_name,
-                m_last.created_at AS last_message_date,
-                m_last.updated_at AS last_message_update
-                
-              FROM conversations c
-              JOIN conversations_users cu on c.id = cu.conversation_id
-              JOIN users u on cu.user_id = u.id
-              LEFT JOIN messages m_last ON c.id = m_last.conversation_id 
+                    SELECT 
+                        c.id,
+                        CASE 
+                            WHEN c.type = 3 THEN c.name
+                            ELSE (SELECT u.username 
+                                  FROM users u 
+                                  JOIN conversations_users cu ON u.id = cu.user_id 
+                                  WHERE cu.conversation_id = c.id AND u.id <> :userId
+                                  LIMIT 1) 
+                        END AS conversation_name,
+                        CASE 
+                            WHEN c.type = 3 THEN c.image_repository
+                            ELSE (SELECT u.image_repository 
+                                  FROM users u 
+                                  JOIN conversations_users cu ON u.id = cu.user_id 
+                                  WHERE cu.conversation_id = c.id AND u.id <> :userId
+                                  LIMIT 1) 
+                        END AS image_repository,
+                        CASE 
+                            WHEN c.type = 3 THEN c.image_file_name
+                            ELSE (SELECT u.image_file_name 
+                                  FROM users u 
+                                  JOIN conversations_users cu ON u.id = cu.user_id 
+                                  WHERE cu.conversation_id = c.id AND u.id <> :userId
+                                  LIMIT 1) 
+                        END AS image_file_name,
+                        c.created_at,
+                        c.updated_at,
+                        c.type,
+                        m_last.id AS last_message_id,
+                        m_last.text AS last_message,
+                        m_last.conversation_id AS last_message_conversation_id,
+                        m_last.user_id AS last_message_user_id,
+                        m_last.image_repository AS last_message_image_repository,
+                        m_last.image_file_name AS last_message_image_file_name,
+                        m_last.created_at AS last_message_date,
+                        m_last.updated_at AS last_message_update
+                    FROM conversations c
+                    JOIN conversations_users cu ON c.id = cu.conversation_id
+                    LEFT JOIN messages m_last ON c.id = m_last.conversation_id 
                         AND m_last.created_at = (
                             SELECT MAX(m.created_at) 
                             FROM messages m 
                             WHERE m.conversation_id = c.id
                         )
-              WHERE u.username not like :username
-                        AND c.id IN (SELECT id FROM conversations c2 join conversations_users cu2 ON c2.id = cu2.conversation_id WHERE cu2.user_id = :userId)
+                    WHERE cu.user_id = :userId;
+
             ");
 
             $query->bindValue(':userId', $userId);
@@ -170,7 +179,7 @@ class Conversation implements JsonSerializable
                     ->setCreatedAt($conversationSql['last_message_date'] ? new \DateTime($conversationSql['last_message_date']) : null);
 
                 $conversation = new Conversation();
-                $conversation->setName($conversationSql["conversations_name"])
+                $conversation->setName($conversationSql["conversation_name"])
                     ->setId($conversationSql["id"])
                     ->setImageRepository($conversationSql["image_repository"])
                     ->setImageFileName($conversationSql["image_file_name"])
@@ -201,23 +210,35 @@ class Conversation implements JsonSerializable
 //            $requete = BDD::getInstance()->prepare('SELECT * FROM conversations WHERE id = :id');
             $query = BDD::getInstance()->prepare("
                 SELECT 
-                DISTINCT
                     c.id,
                     CASE 
-                        WHEN LENGTH(c.name) = 0 THEN u.username
-                        ELSE c.name
-                    END as conversation_name,
-                    c.image_repository,
-                    c.image_file_name,
+                        WHEN c.type = 3 THEN c.name
+                        ELSE u_other.username
+                    END AS conversation_name,
+                    CASE 
+                        WHEN c.type = 3 THEN c.image_repository
+                        ELSE u_other.image_repository
+                    END AS image_repository,
+                    CASE 
+                        WHEN c.type = 3 THEN c.image_file_name
+                        ELSE u_other.image_file_name
+                    END AS image_file_name,
                     c.created_at,
                     c.updated_at,
                     c.type
                 FROM conversations c
-                JOIN conversations_users cu on c.id = cu.conversation_id
-                JOIN users u on cu.user_id = u.id
-                WHERE c.id = :id and u.username not like :username");
+                JOIN conversations_users cu ON c.id = cu.conversation_id
+                JOIN users u ON cu.user_id = u.id
+                LEFT JOIN (
+                    SELECT u.id, u.username, u.image_repository, u.image_file_name, cu.conversation_id
+                    FROM users u
+                    JOIN conversations_users cu ON u.id = cu.user_id
+                ) u_other ON u_other.conversation_id = c.id AND u_other.id <> :userId
+                WHERE c.id = :id
+                AND cu.user_id = :userId;
+                ");
             $query->bindValue(':id', $conversationId);
-            $query->bindValue(':username', $username);
+            $query->bindValue(':userId', $userId);
             $query->execute();
 
             $sqlConversation = $query->fetch(\PDO::FETCH_ASSOC);
@@ -398,7 +419,7 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function exists($userId1, $userId2) : bool
+    public static function exists($userId1, $userId2) : bool // on vérifie si une conv à 2 existe déjà
     {
         try {
             // Vérifie si une association existe déjà
@@ -410,7 +431,7 @@ class Conversation implements JsonSerializable
                 WHERE 
                     user_id = :user1
                     AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
-                    AND (LENGTH(c.name) is null or LENGTH(c.name)<1)
+                    AND c.type = 2
             ');
             $associationCheck->bindValue(':user1', $userId1);
             $associationCheck->bindValue(':user2', $userId2);
@@ -425,7 +446,7 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function Groupexists(array $userIds): bool
+    public static function Groupexists(array $userIds): bool  // on vérifie si une conv de groupe existe déjà
     {
         try {
             // Générer les placeholders pour chaque user_id
@@ -462,7 +483,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlGetIdByUsersId(int $userId1, int $userId2)
+    public static function SqlGetIdByUsersId(int $userId1, int $userId2) // récupềre une conv privée avec les ids des 2 users
     {
         try {
             $query = BDD::getInstance()->prepare('
@@ -473,7 +494,7 @@ class Conversation implements JsonSerializable
                 WHERE 
                     user_id = :user1
                     AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
-                    AND (LENGTH(c.name) is null or LENGTH(c.name)<1)
+                    AND c.type = 2
             ');
             $query->bindValue(':user1', $userId1);
             $query->bindValue(':user2', $userId2);
@@ -558,3 +579,70 @@ class Conversation implements JsonSerializable
     }
 
 }
+
+
+//            SELECT
+//              DISTINCT
+//                c.id,
+//                CASE
+//                    WHEN LENGTH(c.name)>1 THEN c.name
+//                    ELSE u.username
+//                END conversations_name,
+//                CASE
+//                    WHEN LENGTH(c.name)>1 THEN c.image_repository
+//                    ELSE u.image_repository
+//                END image_repository,
+//                CASE
+//                    WHEN LENGTH(c.name)>1 THEN c.image_file_name
+//                    ELSE u.image_file_name
+//                END image_file_name,
+//                c.created_at,
+//                c.updated_at,
+//                c.type,
+//                m_last.id AS last_message_id,
+//                m_last.text AS last_message,
+//                m_last.conversation_id AS last_message_conversation_id,
+//                m_last.user_id AS last_message_user_id,
+//                m_last.image_repository AS last_message_image_repository,
+//                m_last.image_file_name AS last_message_image_file_name,
+//                m_last.created_at AS last_message_date,
+//                m_last.updated_at AS last_message_update
+//
+//              FROM conversations c
+//              JOIN conversations_users cu on c.id = cu.conversation_id
+//              JOIN users u on cu.user_id = u.id
+//              LEFT JOIN messages m_last ON c.id = m_last.conversation_id
+//                        AND m_last.created_at = (
+//                            SELECT MAX(m.created_at)
+//                            FROM messages m
+//                            WHERE m.conversation_id = c.id
+//                        )
+//              WHERE u.username not like :username
+//                        AND c.id IN (SELECT id FROM conversations c2 join conversations_users cu2 ON c2.id = cu2.conversation_id WHERE cu2.user_id = :userId)
+
+
+
+
+
+//SELECT
+//                DISTINCT
+//                    c.id,
+//                    CASE
+//                        WHEN LENGTH(c.name) = 0 or c.name is null THEN u.username
+//                        ELSE c.name
+//                    END as conversation_name,
+//                   CASE
+//                        WHEN LENGTH(c.name)>1 THEN c.image_repository
+//                        ELSE u.image_repository
+//                    END image_repository,
+//                    CASE
+//                        WHEN LENGTH(c.name)>1 THEN c.image_file_name
+//                        ELSE u.image_file_name
+//                    END image_file_name,
+//                    c.created_at,
+//                    c.updated_at,
+//                    c.type
+//                FROM conversations c
+//                JOIN conversations_users cu on c.id = cu.conversation_id
+//                JOIN users u on cu.user_id = u.id
+//                WHERE c.id = :id and u.username not like :username");
