@@ -27,6 +27,32 @@ class ConversationController
         return json_encode($conversations);
     }
 
+    public function getOrCreateConversation(int $recipentId)
+    {
+        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
+            throw new ApiException("Method GET expected", 405);
+        }
+
+        $tokensDatas = JwtService::checkToken();
+        $userId = (int)$tokensDatas->id;
+        $username = (string)$tokensDatas->username;
+        $now = new \DateTime();
+
+        if (Conversation::exists($userId, $recipentId)) {
+            // recup l'id de conversation existante entre les deux users
+            $conversationId = Conversation::SqlGetIdByUsersId($userId, $recipentId);
+        }
+        else {
+            $conversation = new Conversation();
+            $conversation->setCreatedAt($now)
+                ->setUpdatedAt($now);
+            $conversationId = Conversation::SqlAdd($conversation, $userId, $recipentId);
+        }
+
+        $conversation = Conversation::SqlGetById($conversationId, $username, $userId);
+        return json_encode($conversation);
+    }
+
 
     public function show(int $conversationId) // récupère toutes les infos d'une conversation avec son nom si conv de groupe et avec le nom du dest si conversation à deux (penser à implémenter vérif que si la conversation demandée n'appartient pas à l'utilsateur on lance une erreur)
     {

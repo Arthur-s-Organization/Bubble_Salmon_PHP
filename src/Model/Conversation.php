@@ -136,8 +136,14 @@ class Conversation implements JsonSerializable
                 END image_file_name,
                 c.created_at,
                 c.updated_at,
+                m_last.id AS last_message_id,
                 m_last.text AS last_message,
-                m_last.created_at AS last_message_date
+                m_last.conversation_id AS last_message_conversation_id,
+                m_last.user_id AS last_message_user_id,
+                m_last.image_repository AS last_message_image_repository,
+                m_last.image_file_name AS last_message_image_file_name,
+                m_last.created_at AS last_message_date,
+                m_last.updated_at AS last_message_update
                 
               FROM conversations c
               JOIN conversations_users cu on c.id = cu.conversation_id
@@ -162,6 +168,12 @@ class Conversation implements JsonSerializable
 
                 $lastMessage = new Message();
                 $lastMessage->setText($conversationSql['last_message'])
+                    ->setId($conversationSql['last_message_id'])
+                    ->setConversationId($conversationSql['last_message_conversation_id'])
+                    ->setUserId($conversationSql['last_message_user_id'])
+                    ->setImageFileName($conversationSql['last_message_image_file_name'])
+                    ->setImageRepository($conversationSql['last_message_image_repository'])
+                    ->setUpdatedAt($conversationSql['last_message_update'] ? new \DateTime($conversationSql['last_message_update']) : null)
                     ->setCreatedAt($conversationSql['last_message_date'] ? new \DateTime($conversationSql['last_message_date']) : null);
 
                 $conversation = new Conversation();
@@ -232,7 +244,7 @@ class Conversation implements JsonSerializable
     }
 
     public static function SqlAdd(Conversation $conversation, int $userId, int $recipientId)
-    { // ajout de la logique de vérification pour ne pas créer de coonv redondante
+    { // ajout de la logique de vérification pour ne pas créer de conv redondante
 
         try {
             $db = BDD::getInstance();
@@ -398,6 +410,24 @@ class Conversation implements JsonSerializable
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
+    }
+
+    public static function exists($userId1, $userId2) : bool
+    {
+        // Vérifie si une association existe déjà
+        $associationCheck = BDD::getInstance()->prepare('
+            SELECT COUNT(*) 
+            FROM conversations_users 
+            WHERE user_id = :user1 
+            AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
+        ');
+        $associationCheck->bindValue(':user1', $userId1);
+        $associationCheck->bindValue(':user2', $userId2);
+        $associationCheck->execute();
+        if ($associationCheck->fetchColumn() > 0) {
+            return true;
+        }
+        return false;
     }
 
     public static function getSqlImageRepository($conversationId)
