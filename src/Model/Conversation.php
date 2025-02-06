@@ -210,11 +210,17 @@ class Conversation implements JsonSerializable
                 DISTINCT
                     c.id,
                     CASE 
-                        WHEN LENGTH(c.name) = 0 THEN u.username
+                        WHEN LENGTH(c.name) = 0 or c.name is null THEN u.username
                         ELSE c.name
                     END as conversation_name,
-                    c.image_repository,
-                    c.image_file_name,
+                     CASE 
+                    WHEN LENGTH(c.name)>1 THEN c.image_repository
+                    ELSE u.image_repository
+                    END image_repository,
+                    CASE 
+                        WHEN LENGTH(c.name)>1 THEN c.image_file_name
+                        ELSE u.image_file_name
+                    END image_file_name,
                     c.created_at,
                     c.updated_at
                 FROM conversations c
