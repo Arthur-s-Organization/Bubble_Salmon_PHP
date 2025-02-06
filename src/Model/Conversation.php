@@ -451,16 +451,16 @@ class Conversation implements JsonSerializable
                 FROM conversations_users
                 WHERE user_id IN (' . $placeholders . ') 
                 GROUP BY conversation_id
-                HAVING COUNT(DISTINCT user_id) = :count
+                HAVING COUNT(DISTINCT user_id) = ?
         ');
 
             // Lier les valeurs des userIds aux placeholders
             foreach ($userIds as $index => $userId) {
-                $associationCheck->bindValue($index + 1, $userId, PDO::PARAM_INT);
+                $associationCheck->bindValue($index + 1, $userId, \PDO::PARAM_INT);
             }
 
-            // Lier le nombre d'utilisateurs
-            $associationCheck->bindValue(':count', count($userIds), PDO::PARAM_INT);
+            // Lier le nombre d'utilisateurs (dernier paramètre, également positionnel)
+            $associationCheck->bindValue(count($userIds) + 1, count($userIds), \PDO::PARAM_INT);
 
             // Exécuter la requête
             $associationCheck->execute();
@@ -468,9 +468,10 @@ class Conversation implements JsonSerializable
             // Vérifie si la conversation existe
             return $associationCheck->fetchColumn() !== false;
         } catch (\PDOException $e) {
-            throw new ApiException('Database Error: ' . $e->getMessage(), 500);
+            throw new ApiException('Database Error test: ' . $e->getMessage(), 500);
         }
     }
+
 
     public static function SqlGetIdByUsersId(int $userId1, int $userId2)
     {

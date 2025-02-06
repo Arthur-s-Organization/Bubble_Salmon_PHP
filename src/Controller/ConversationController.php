@@ -211,7 +211,7 @@ class ConversationController
             throw new ApiException("Missing required fields : RecipientIds is required", 400);
         }
 
-        if (count($jsonDatasObj->RecipientIds) < 3)
+        if (count($jsonDatasObj->RecipientIds) < 2)
         {
             throw new ApiException("A group conversation must have at least 3 users", 400);
         }
