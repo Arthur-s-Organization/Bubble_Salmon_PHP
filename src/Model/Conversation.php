@@ -312,14 +312,11 @@ class Conversation implements JsonSerializable
                 }
             }
 
-            // Vérifie si une association existe déjà : à implémenter !
-//            $associationCheck = $db->prepare('SELECT COUNT(*) FROM conversations_users WHERE conversation_id = :conversationId AND user_id = :userId');
-//            $associationCheck->bindValue(':conversationId', $conversationId);
-//            $associationCheck->bindValue(':userId', $userId);
-//            $associationCheck->execute();
-//            if ($associationCheck->fetchColumn() > 0) {
-//                throw new ApiException("User {$userId} already belongs to conversation {$conversationId}", 409);
-//            }
+            if (Conversation::Groupexists($recipentIds)) // Vérifie si une association existe déjà -> si ce groupe de conversation existe deja quoi !
+            {
+                throw new ApiException("A Conversation with this users already exists", 404);
+            }
+
 
             // création de la conversation
             $query = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
@@ -436,6 +433,42 @@ class Conversation implements JsonSerializable
         }
         catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function Groupexists(array $userIds): bool
+    {
+        try {
+            // Générer les placeholders pour chaque user_id
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+
+            // Connexion à la base de données
+            $bdd = BDD::getInstance();
+
+            // Requête SQL avec les placeholders dynamiques
+            $associationCheck = $bdd->prepare('
+                SELECT conversation_id
+                FROM conversations_users
+                WHERE user_id IN (' . $placeholders . ') 
+                GROUP BY conversation_id
+                HAVING COUNT(DISTINCT user_id) = :count
+        ');
+
+            // Lier les valeurs des userIds aux placeholders
+            foreach ($userIds as $index => $userId) {
+                $associationCheck->bindValue($index + 1, $userId, PDO::PARAM_INT);
+            }
+
+            // Lier le nombre d'utilisateurs
+            $associationCheck->bindValue(':count', count($userIds), PDO::PARAM_INT);
+
+            // Exécuter la requête
+            $associationCheck->execute();
+
+            // Vérifie si la conversation existe
+            return $associationCheck->fetchColumn() !== false;
+        } catch (\PDOException $e) {
+            throw new ApiException('Database Error: ' . $e->getMessage(), 500);
         }
     }
 
