@@ -27,15 +27,28 @@ class ConversationController
         return json_encode($conversations);
     }
 
-    public function getOrCreateConversation(int $recipentId)
+    public function getOrCreate()
     {
-        if ($_SERVER["REQUEST_METHOD"] !== "GET") {
-            throw new ApiException("Method GET expected", 405);
+        if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+            throw new ApiException("Method POST expected", 405);
         }
 
         $tokensDatas = JwtService::checkToken();
         $userId = (int)$tokensDatas->id;
         $username = (string)$tokensDatas->username;
+
+        $jsonDatasStr = file_get_contents("php://input");
+        $jsonDatasObj = json_decode($jsonDatasStr);
+
+        if (empty($jsonDatasObj)) {
+            throw new ApiException("No data provided in the request body", 400);
+        }
+
+        if (!isset($jsonDatasObj->RecipientId)){
+            throw new ApiException("Missing required fields : RecipientId is required", 400);
+        }
+
+        $recipentId = $jsonDatasObj->RecipientId;
         $now = new \DateTime();
 
         if (Conversation::exists($userId, $recipentId)) {
@@ -122,7 +135,7 @@ class ConversationController
 //        return json_encode(["status" => "success", "Message" => "Conversation successfully added", "conversationId" => $conversationId]);
 //    }
 
-    public function add() // créé une nouvelle conversation à deux (utilisateur connecté plus un autre)
+    public function add() // créé une nouvelle conversation à deux (l'utilisateur connecté plus un autre)
     {
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             throw new ApiException("Method POST expected", 405);

@@ -118,7 +118,7 @@ class Conversation implements JsonSerializable
     {
         try {
 //            $requete = BDD::getInstance()->prepare('SELECT * FROM conversations c JOIN conversations_users cu ON c.id = cu.conversation_id WHERE cu.user_id = :userId');
-            $requete = BDD::getInstance()->prepare("  
+            $query = BDD::getInstance()->prepare("  
             SELECT 
               DISTINCT
                 c.id,
@@ -158,11 +158,11 @@ class Conversation implements JsonSerializable
                         AND c.id IN (SELECT id FROM conversations c2 join conversations_users cu2 ON c2.id = cu2.conversation_id WHERE cu2.user_id = :userId)
             ");
 
-            $requete->bindValue(':userId', $userId);
-            $requete->bindValue(':username', $username);
-            $requete->execute();
+            $query->bindValue(':userId', $userId);
+            $query->bindValue(':username', $username);
+            $query->execute();
 
-            $conversationsSql = $requete->fetchAll(\PDO::FETCH_ASSOC);
+            $conversationsSql = $query->fetchAll(\PDO::FETCH_ASSOC);
             $conversationsObject = [];
             foreach ($conversationsSql as $conversationSql) {
 
@@ -205,7 +205,7 @@ class Conversation implements JsonSerializable
                 throw new ApiException("User {$userId} doesn't belongs to conversation {$conversationId}", 409);
             }
 //            $requete = BDD::getInstance()->prepare('SELECT * FROM conversations WHERE id = :id');
-            $requete = BDD::getInstance()->prepare("
+            $query = BDD::getInstance()->prepare("
                 SELECT 
                 DISTINCT
                     c.id,
@@ -221,11 +221,11 @@ class Conversation implements JsonSerializable
                 JOIN conversations_users cu on c.id = cu.conversation_id
                 JOIN users u on cu.user_id = u.id
                 WHERE c.id = :id and u.username not like :username");
-            $requete->bindValue(':id', $conversationId);
-            $requete->bindValue(':username', $username);
-            $requete->execute();
+            $query->bindValue(':id', $conversationId);
+            $query->bindValue(':username', $username);
+            $query->execute();
 
-            $sqlConversation = $requete->fetch(\PDO::FETCH_ASSOC);
+            $sqlConversation = $query->fetch(\PDO::FETCH_ASSOC);
             if ($sqlConversation !== false) {
                 $conversation = new Conversation();
                 $conversation->setId($sqlConversation["id"])
@@ -250,11 +250,11 @@ class Conversation implements JsonSerializable
             $db = BDD::getInstance();
 
             // Vérifie si le destinataire existe
-            $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :userId');
-            $userCheck->bindValue(':userId', $userId);
+            $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :recipientId');
+            $userCheck->bindValue(':recipientId', $recipientId);
             $userCheck->execute();
             if ($userCheck->fetchColumn() === 0) {
-                throw new ApiException("UserId {$userId} doesn''t exist", 404);
+                throw new ApiException("UserId {$recipientId} doesn''t exist", 404);
             }
 
             // Vérifie si une association existe déjà : à implémenter !
@@ -267,28 +267,28 @@ class Conversation implements JsonSerializable
 //            }
 
             // création de la conversation
-            $requete = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
+            $query = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
 
-            $requete->bindValue(':name', $conversation->getName());
-            $requete->bindValue(':image_repository', $conversation->getImageRepository());
-            $requete->bindValue(':image_file_name', $conversation->getImageFileName());
-            $requete->bindValue(':createdAt', $conversation->getCreatedAt()?->format('Y-m-d H:i:s'));
-            $requete->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':name', $conversation->getName());
+            $query->bindValue(':image_repository', $conversation->getImageRepository());
+            $query->bindValue(':image_file_name', $conversation->getImageFileName());
+            $query->bindValue(':createdAt', $conversation->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
-            $requete->execute();
+            $query->execute();
             $lastConversationId = BDD::getInstance()->lastInsertId();
 
             // ajout de l'utilisateur connecté à la conv
-            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
-            $requete->bindValue(':conversationId', $lastConversationId);
-            $requete->bindValue(':userId', $userId);
-            $requete->execute();
+            $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $query->bindValue(':conversationId', $lastConversationId);
+            $query->bindValue(':userId', $userId);
+            $query->execute();
 
             // ajout du destinataire à la conv
-            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
-            $requete->bindValue(':conversationId', $lastConversationId);
-            $requete->bindValue(':userId', $recipientId);
-            $requete->execute();
+            $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $query->bindValue(':conversationId', $lastConversationId);
+            $query->bindValue(':userId', $recipientId);
+            $query->execute();
 
             return $lastConversationId;
         } catch (\PDOException $e) {
@@ -322,29 +322,29 @@ class Conversation implements JsonSerializable
 //            }
 
             // création de la conversation
-            $requete = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
+            $query = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt)");
 
-            $requete->bindValue(':name', $conversation->getName());
-            $requete->bindValue(':image_repository', $conversation->getImageRepository());
-            $requete->bindValue(':image_file_name', $conversation->getImageFileName());
-            $requete->bindValue(':createdAt', $conversation->getCreatedAt()?->format('Y-m-d H:i:s'));
-            $requete->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':name', $conversation->getName());
+            $query->bindValue(':image_repository', $conversation->getImageRepository());
+            $query->bindValue(':image_file_name', $conversation->getImageFileName());
+            $query->bindValue(':createdAt', $conversation->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
 
-            $requete->execute();
+            $query->execute();
             $lastConversationId = BDD::getInstance()->lastInsertId();
 
             // ajout de l'utilisateur connecté à la conv
-            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
-            $requete->bindValue(':conversationId', $lastConversationId);
-            $requete->bindValue(':userId', $userId);
-            $requete->execute();
+            $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $query->bindValue(':conversationId', $lastConversationId);
+            $query->bindValue(':userId', $userId);
+            $query->execute();
 
             // ajout des autres destinataires de la conv
             foreach ($recipentIds as $recipentId) {
-                $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
-                $requete->bindValue(':conversationId', $lastConversationId);
-                $requete->bindValue(':userId', $recipentId);
-                $requete->execute();
+                $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+                $query->bindValue(':conversationId', $lastConversationId);
+                $query->bindValue(':userId', $recipentId);
+                $query->execute();
             }
 
             return $lastConversationId;
@@ -385,10 +385,10 @@ class Conversation implements JsonSerializable
                 throw new ApiException("User {$userId} already belongs to conversation {$conversationId}", 409);
             }
 
-            $requete = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
-            $requete->bindValue(':conversationId', $conversationId);
-            $requete->bindValue(':userId', $userId);
-            $requete->execute();
+            $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $query->bindValue(':conversationId', $conversationId);
+            $query->bindValue(':userId', $userId);
+            $query->execute();
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
@@ -398,15 +398,15 @@ class Conversation implements JsonSerializable
     public static function SqlUpdate(Conversation $conversation)
     {
         try {
-            $requete = BDD::getInstance()->prepare("UPDATE conversations SET name =:name, image_repository = :image_repository,image_file_name = :image_file_name, updated_at = :updatedAt WHERE id = :id");
+            $query = BDD::getInstance()->prepare("UPDATE conversations SET name =:name, image_repository = :image_repository,image_file_name = :image_file_name, updated_at = :updatedAt WHERE id = :id");
 
-            $requete->bindValue(':name', $conversation->getName());
-            $requete->bindValue(':image_repository', $conversation->getImageRepository());
-            $requete->bindValue(':image_file_name', $conversation->getImageFileName());
-            $requete->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
-            $requete->bindValue(':id', $conversation->getId());
+            $query->bindValue(':name', $conversation->getName());
+            $query->bindValue(':image_repository', $conversation->getImageRepository());
+            $query->bindValue(':image_file_name', $conversation->getImageFileName());
+            $query->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':id', $conversation->getId());
 
-            $requete->execute();
+            $query->execute();
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
@@ -414,30 +414,64 @@ class Conversation implements JsonSerializable
 
     public static function exists($userId1, $userId2) : bool
     {
-        // Vérifie si une association existe déjà
-        $associationCheck = BDD::getInstance()->prepare('
-            SELECT COUNT(*) 
-            FROM conversations_users 
-            WHERE user_id = :user1 
-            AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
-        ');
-        $associationCheck->bindValue(':user1', $userId1);
-        $associationCheck->bindValue(':user2', $userId2);
-        $associationCheck->execute();
-        if ($associationCheck->fetchColumn() > 0) {
-            return true;
+        try {
+            // Vérifie si une association existe déjà
+            $associationCheck = BDD::getInstance()->prepare('
+                SELECT COUNT(*) 
+                FROM conversations_users cu
+                JOIN conversations c
+                    on cu.conversation_id = c.id
+                WHERE 
+                    user_id = :user1
+                    AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
+                    AND (LENGTH(c.name) is null or LENGTH(c.name)<1)
+            ');
+            $associationCheck->bindValue(':user1', $userId1);
+            $associationCheck->bindValue(':user2', $userId2);
+            $associationCheck->execute();
+            if ($associationCheck->fetchColumn() > 0) {
+                return true;
+            }
+            return false;
         }
-        return false;
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function SqlGetIdByUsersId(int $userId1, int $userId2)
+    {
+        try {
+            $query = BDD::getInstance()->prepare('
+                SELECT c.id
+                FROM conversations_users cu
+                JOIN conversations c
+                    on cu.conversation_id = c.id
+                WHERE 
+                    user_id = :user1
+                    AND conversation_id IN (SELECT conversation_id FROM conversations_users WHERE user_id = :user2)
+                    AND (LENGTH(c.name) is null or LENGTH(c.name)<1)
+            ');
+            $query->bindValue(':user1', $userId1);
+            $query->bindValue(':user2', $userId2);
+            $query->execute();
+
+            $result = $query->fetch(\PDO::FETCH_ASSOC);
+            return $result['id'];
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
     }
 
     public static function getSqlImageRepository($conversationId)
     {
         try {
-            $requete = BDD::getInstance()->prepare("SELECT image_repository FROM conversations WHERE id = :conversationId");
-            $requete->bindValue(':conversationId', $conversationId);
-            $requete->execute();
+            $query = BDD::getInstance()->prepare("SELECT image_repository FROM conversations WHERE id = :conversationId");
+            $query->bindValue(':conversationId', $conversationId);
+            $query->execute();
 
-            $result = $requete->fetch(\PDO::FETCH_ASSOC);
+            $result = $query->fetch(\PDO::FETCH_ASSOC);
             return $result ? $result['image_repository'] : null;
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
@@ -447,11 +481,11 @@ class Conversation implements JsonSerializable
     public static function getSqlImageName($conversationId)
     {
         try {
-            $requete = BDD::getInstance()->prepare("SELECT image_file_name FROM conversations WHERE id = :conversationId");
-            $requete->bindValue(':conversationId', $conversationId);
-            $requete->execute();
+            $query = BDD::getInstance()->prepare("SELECT image_file_name FROM conversations WHERE id = :conversationId");
+            $query->bindValue(':conversationId', $conversationId);
+            $query->execute();
 
-            $result = $requete->fetch(\PDO::FETCH_ASSOC);
+            $result = $query->fetch(\PDO::FETCH_ASSOC);
             return $result ? $result['image_file_name'] : null;
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
@@ -461,11 +495,11 @@ class Conversation implements JsonSerializable
     public static function SqlGetFileredConversations(string $filter) // pb ! on renvoie juste les conversations et pas les noms des users
     {
         try {
-            $requete = BDD::getInstance()->prepare("SELECT * FROM users WHERE username LIKE :filter");
-            $requete->bindValue(':filter', "%{$filter}%");
-            $requete->execute();
+            $query = BDD::getInstance()->prepare("SELECT * FROM users WHERE username LIKE :filter");
+            $query->bindValue(':filter', "%{$filter}%");
+            $query->execute();
 
-            $sqlConversations = $requete->fetchAll(\PDO::FETCH_ASSOC);
+            $sqlConversations = $query->fetchAll(\PDO::FETCH_ASSOC);
             if ($sqlConversations !== false) {
                 $conversations = [];
                 foreach ($sqlConversations as $sqlConversation) {
