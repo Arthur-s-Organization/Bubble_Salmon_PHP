@@ -125,9 +125,15 @@ class Message implements JsonSerializable{
             $query->bindValue(':image_file_name', $message->getImageFileName());
             $query->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
             $query->bindValue(':updated_at', $message->getUpdatedAt()?->format('Y-m-d H:i:s'));
-
             $query->execute();
-            return BDD::getInstance()->lastInsertId();
+            $lastInsertMessageId = BDD::getInstance()->lastInsertId();
+
+            $query = BDD::getInstance()->prepare("UPDATE conversations SET updated_at = :messageCreatedAt WHERE id = :conversationId");
+            $query->bindValue(':messageCreatedAt', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':conversationId', $message->getConversationId());
+            $query->execute();
+
+            return $lastInsertMessageId;
         }
         catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
