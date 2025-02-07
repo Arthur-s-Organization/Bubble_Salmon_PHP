@@ -213,9 +213,17 @@ class ConversationController
             }
         }
 
+        $oldName = Conversation::SqlGetNamebyId($conversationId);
+        if (isset($jsonDatasObj->Name)) { // ternaire non ?
+            $name = $jsonDatasObj->Name;
+        }
+        else {
+            $name = $oldName;
+        }
+
         $conversation = new Conversation();
         $conversation->setId($conversationId)
-            ->setName($jsonDatasObj->Name)
+            ->setName($name)
             ->setImageRepository($sqlRepository)
             ->setImageFileName($imageName)
             ->setUpdatedAt($now);
