@@ -13,6 +13,18 @@ class Message implements JsonSerializable{
     private ?string $imageFileName = null;
     private ?\DateTime $createdAt = null;
     private ?\DateTime $updatedAt = null;
+    private ?string $username = null;
+
+    public function getUsername(): ?string
+    {
+        return $this->username;
+    }
+
+    public function setUsername(?string $username): Message
+    {
+        $this->username = $username;
+        return $this;
+    }
 
     public function getId(): ?int
     {
@@ -124,7 +136,23 @@ class Message implements JsonSerializable{
 
     public static function SqlGetAllByConversationId(int $conversationId) {
         try {
-            $query = BDD::getInstance()->prepare('SELECT * FROM messages WHERE conversation_id = :conversationId ORDER BY created_at desc');
+            $query = BDD::getInstance()->prepare('
+            SELECT 
+                m.id,
+                m.user_id,
+                m.conversation_id,
+                m.text,
+                m.image_repository,
+                m.image_file_name,
+                m.created_at,
+                m.updated_at,
+                u.username 
+            FROM messages m 
+            JOIN users u
+                ON m.user_id = u.id
+            WHERE conversation_id = :conversationId 
+            ORDER BY created_at desc
+            ');
             $query->bindValue(':conversationId', $conversationId);
             $query->execute();
             $messagesSql = $query->fetchall(\PDO::FETCH_ASSOC);
@@ -139,7 +167,8 @@ class Message implements JsonSerializable{
                     ->setImageRepository($messageSql["image_repository"])
                     ->setImageFileName($messageSql["image_file_name"])
                     ->setcreatedAt(new \DateTime($messageSql["created_at"]))
-                    ->setupdatedAt(new \DateTime($messageSql["updated_at"]));
+                    ->setupdatedAt(new \DateTime($messageSql["updated_at"]))
+                    ->setUsername($messageSql["username"]);
                 $messagesObject[] = $message;
             }
             return $messagesObject;
@@ -159,7 +188,8 @@ class Message implements JsonSerializable{
             "imageRepository" => $this->getImageRepository(),
             "imageFileName" => $this->getImageFileName(),
             "createdAt" => $this->getCreatedAt()?->format("Y-m-d H:i:s"),
-            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d H:i:s")
+            "updatedAt" => $this->getUpdatedAt()?->format("Y-m-d H:i:s"),
+            "username" => $this->getUsername(),
         ];
     }
 
