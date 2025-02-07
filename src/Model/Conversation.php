@@ -157,7 +157,7 @@ class Conversation implements JsonSerializable
                             WHERE m.conversation_id = c.id
                         )
                     WHERE cu.user_id = :userId
-                    ORDER BY  m_last.created_at desc
+                    ORDER BY  c.updated_at desc
 
             ");
 
