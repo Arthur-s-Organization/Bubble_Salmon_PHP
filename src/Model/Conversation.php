@@ -156,7 +156,8 @@ class Conversation implements JsonSerializable
                             FROM messages m 
                             WHERE m.conversation_id = c.id
                         )
-                    WHERE cu.user_id = :userId;
+                    WHERE cu.user_id = :userId
+                    ORDER BY  m_last.created_at desc
 
             ");
 
