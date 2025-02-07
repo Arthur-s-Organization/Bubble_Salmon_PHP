@@ -509,7 +509,7 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function getSqlImageRepository($conversationId)
+    public static function getSqlImageRepository(int $conversationId)
     {
         try {
             $query = BDD::getInstance()->prepare("SELECT image_repository FROM conversations WHERE id = :conversationId");
@@ -523,7 +523,7 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function getSqlImageName($conversationId)
+    public static function getSqlImageName(int $conversationId)
     {
         try {
             $query = BDD::getInstance()->prepare("SELECT image_file_name FROM conversations WHERE id = :conversationId");
@@ -532,6 +532,20 @@ class Conversation implements JsonSerializable
 
             $result = $query->fetch(\PDO::FETCH_ASSOC);
             return $result ? $result['image_file_name'] : null;
+        } catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function SqlGetNamebyId(int $conversationId)
+    {
+        try {
+            $query = BDD::getInstance()->prepare("SELECT name FROM conversations WHERE id = :conversationId");
+            $query->bindValue(':conversationId', $conversationId);
+            $query->execute();
+
+            $result = $query->fetch(\PDO::FETCH_ASSOC);
+            return $result ? $result['name'] : null;
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
