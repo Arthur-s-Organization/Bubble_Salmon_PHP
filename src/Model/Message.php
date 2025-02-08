@@ -116,22 +116,46 @@ class Message implements JsonSerializable{
 
     public static function SqlAdd(Message $message){
         try {
-            $query = BDD::getInstance()->prepare("INSERT INTO messages (user_id, conversation_id, text, image_repository, image_file_name, created_at, updated_at) VALUES (:user_id, :conversation_id, :text, :image_repository, :image_file_name, :created_at, :updated_at)");
 
-            $query->bindValue(':user_id', $message->getUserId());
-            $query->bindValue(':conversation_id', $message->getConversationId());
-            $query->bindValue(':text', $message->getText());
-            $query->bindValue(':image_repository', $message->getImageRepository());
-            $query->bindValue(':image_file_name', $message->getImageFileName());
-            $query->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
-            $query->bindValue(':updated_at', $message->getUpdatedAt()?->format('Y-m-d H:i:s'));
-            $query->execute();
+            $conversationExistQuery= BDD::getInstance()->prepare('
+                SELECT COUNT(*) 
+                FROM conversations
+                WHERE id = :conversationId
+            ');
+            $conversationExistQuery->bindValue(':conversationId', $message->getConversationId());
+            $conversationExistQuery->execute();
+            if ($conversationExistQuery->fetchColumn() === 0) {
+                throw new ApiException("Conversation {$message->getConversationId()} doesn't exists", 404);
+            }
+
+            $userBelongsToConversationQuery= BDD::getInstance()->prepare('
+                SELECT COUNT(*)
+                FROM conversations_users
+                WHERE conversation_id = :conversationId 
+                    AND user_id = :userId
+            ');
+            $userBelongsToConversationQuery->bindValue(':conversationId', $message->getConversationId());
+            $userBelongsToConversationQuery->bindValue(':userId', $message->getUserId());
+            $userBelongsToConversationQuery->execute();
+            if ($userBelongsToConversationQuery->fetchColumn() === 0) {
+                throw new ApiException("User {$message->getUserId()} doesn't belong to conversation {$message->getConversationId()}", 404);
+            }
+
+            $addConversationQuery = BDD::getInstance()->prepare("INSERT INTO messages (user_id, conversation_id, text, image_repository, image_file_name, created_at, updated_at) VALUES (:user_id, :conversation_id, :text, :image_repository, :image_file_name, :created_at, :updated_at)");
+            $addConversationQuery->bindValue(':user_id', $message->getUserId());
+            $addConversationQuery->bindValue(':conversation_id', $message->getConversationId());
+            $addConversationQuery->bindValue(':text', $message->getText());
+            $addConversationQuery->bindValue(':image_repository', $message->getImageRepository());
+            $addConversationQuery->bindValue(':image_file_name', $message->getImageFileName());
+            $addConversationQuery->bindValue(':created_at', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $addConversationQuery->bindValue(':updated_at', $message->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $addConversationQuery->execute();
             $lastInsertMessageId = BDD::getInstance()->lastInsertId();
 
-            $query = BDD::getInstance()->prepare("UPDATE conversations SET updated_at = :messageCreatedAt WHERE id = :conversationId");
-            $query->bindValue(':messageCreatedAt', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
-            $query->bindValue(':conversationId', $message->getConversationId());
-            $query->execute();
+            $updateConversationQuery = BDD::getInstance()->prepare("UPDATE conversations SET updated_at = :messageCreatedAt WHERE id = :conversationId");
+            $updateConversationQuery->bindValue(':messageCreatedAt', $message->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $updateConversationQuery->bindValue(':conversationId', $message->getConversationId());
+            $updateConversationQuery->execute();
 
             return $lastInsertMessageId;
         }
@@ -140,9 +164,33 @@ class Message implements JsonSerializable{
         }
     }
 
-    public static function SqlGetAllByConversationId(int $conversationId) {
+    public static function SqlGetAllByConversationId(int $conversationId, $userId) {
         try {
-            $query = BDD::getInstance()->prepare('
+            $conversationExistQuery= BDD::getInstance()->prepare('
+                SELECT COUNT(*) 
+                FROM conversations
+                WHERE id = :conversationId
+            ');
+            $conversationExistQuery->bindValue(':conversationId', $conversationId);
+            $conversationExistQuery->execute();
+            if ($conversationExistQuery->fetchColumn() === 0) {
+                throw new ApiException("Conversation {$conversationId} doesn't exists", 404);
+            }
+
+            $userBelongsToConversationQuery= BDD::getInstance()->prepare('
+                SELECT COUNT(*)
+                FROM conversations_users
+                WHERE conversation_id = :conversationId 
+                    AND user_id = :userId
+            ');
+            $userBelongsToConversationQuery->bindValue(':conversationId', $conversationId);
+            $userBelongsToConversationQuery->bindValue(':userId', $userId);
+            $userBelongsToConversationQuery->execute();
+            if ($userBelongsToConversationQuery->fetchColumn() === 0) {
+                throw new ApiException("User {$userId} doesn't belong to conversation {$conversationId}", 404);
+            }
+
+            $getAllMessagesQuery = BDD::getInstance()->prepare('
             SELECT 
                 m.id,
                 m.user_id,
@@ -159,9 +207,9 @@ class Message implements JsonSerializable{
             WHERE conversation_id = :conversationId 
             ORDER BY created_at desc
             ');
-            $query->bindValue(':conversationId', $conversationId);
-            $query->execute();
-            $messagesSql = $query->fetchall(\PDO::FETCH_ASSOC);
+            $getAllMessagesQuery->bindValue(':conversationId', $conversationId);
+            $getAllMessagesQuery->execute();
+            $messagesSql = $getAllMessagesQuery->fetchall(\PDO::FETCH_ASSOC);
 
             $messagesObject = [];
             foreach ($messagesSql as $messageSql) {

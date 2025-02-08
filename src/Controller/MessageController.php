@@ -84,9 +84,10 @@ class MessageController {
             throw new ApiException("Method GET expected", 405);
         }
 
-        JwtService::checkToken();
+        $tokensDatas = JwtService::checkToken();
+        $userId = (int)$tokensDatas->id;
 
-        $messages = Message::SqlGetAllByConversationId($conversationId);
+        $messages = Message::SqlGetAllByConversationId($conversationId, $userId);
         return json_encode($messages);
     }
 }
