@@ -28,7 +28,6 @@ class Conversation implements JsonSerializable
         return $this;
     }
 
-
     public function getLastMessage(): ?Message
     {
         return $this->lastMessage;
@@ -107,13 +106,14 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlGetAllbyUserId(int $userId, string $username) // rajouter le case 1 conv à 1
+    public static function SqlGetAllbyUserId(int $userId, string $username)
     {
         try {
             $query = BDD::getInstance()->prepare("  
                     SELECT 
                         c.id,
                         CASE 
+                            WHEN c.type = 1 THEN u.username
                             WHEN c.type = 3 THEN c.name
                             ELSE (SELECT u.username 
                                   FROM users u 
@@ -122,6 +122,7 @@ class Conversation implements JsonSerializable
                                   LIMIT 1) 
                         END AS conversation_name,
                         CASE 
+                            WHEN c.type = 1 THEN u.image_repository
                             WHEN c.type = 3 THEN c.image_repository
                             ELSE (SELECT u.image_repository 
                                   FROM users u 
@@ -130,6 +131,7 @@ class Conversation implements JsonSerializable
                                   LIMIT 1) 
                         END AS image_repository,
                         CASE 
+                            WHEN c.type = 1 THEN u.image_file_name
                             WHEN c.type = 3 THEN c.image_file_name
                             ELSE (SELECT u.image_file_name 
                                   FROM users u 
@@ -150,6 +152,7 @@ class Conversation implements JsonSerializable
                         m_last.updated_at AS last_message_update
                     FROM conversations c
                     JOIN conversations_users cu ON c.id = cu.conversation_id
+                    JOIN users u ON u.id = cu.user_id
                     LEFT JOIN messages m_last ON c.id = m_last.conversation_id 
                         AND m_last.created_at = (
                             SELECT MAX(m.created_at) 
@@ -201,7 +204,7 @@ class Conversation implements JsonSerializable
     public static function SqlGetById(int $conversationId, string $username, int $userId)
     {
         try {
-            // Vérifie si l'association existe bien
+            // Vérifie si l'association existe bien : que l'utilisateur appartient bien à la conv
             $associationCheck = BDD::getInstance()->prepare('SELECT COUNT(*) FROM conversations_users WHERE conversation_id = :conversationId AND user_id = :userId');
             $associationCheck->bindValue(':conversationId', $conversationId);
             $associationCheck->bindValue(':userId', $userId);
@@ -209,19 +212,22 @@ class Conversation implements JsonSerializable
             if ($associationCheck->fetchColumn() < 1) {
                 throw new ApiException("User {$userId} doesn't belongs to conversation {$conversationId}", 409);
             }
-//            $requete = BDD::getInstance()->prepare('SELECT * FROM conversations WHERE id = :id');
+
             $query = BDD::getInstance()->prepare("
                 SELECT 
                     c.id,
                     CASE 
+                        WHEN c.type = 1 THEN u.username
                         WHEN c.type = 3 THEN c.name
                         ELSE u_other.username
                     END AS conversation_name,
                     CASE 
+                        WHEN c.type = 1 THEN u.image_repository
                         WHEN c.type = 3 THEN c.image_repository
                         ELSE u_other.image_repository
                     END AS image_repository,
                     CASE 
+                        WHEN c.type = 1 THEN u.image_file_name
                         WHEN c.type = 3 THEN c.image_file_name
                         ELSE u_other.image_file_name
                     END AS image_file_name,
@@ -262,6 +268,36 @@ class Conversation implements JsonSerializable
         }
     }
 
+
+    public static function SqlAddSelf(Conversation $conversation, int $userId)
+    {
+        try {
+            $db = BDD::getInstance();
+
+            // création de la conversation
+            $query = $db->prepare("INSERT INTO conversations (name, image_repository, image_file_name ,created_at, updated_at, type) VALUES (:name, :image_repository, :image_file_name, :createdAt, :updatedAt, :type)");
+
+            $query->bindValue(':name', $conversation->getName());
+            $query->bindValue(':image_repository', $conversation->getImageRepository());
+            $query->bindValue(':image_file_name', $conversation->getImageFileName());
+            $query->bindValue(':createdAt', $conversation->getCreatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':updatedAt', $conversation->getUpdatedAt()?->format('Y-m-d H:i:s'));
+            $query->bindValue(':type', $conversation->getType());
+
+            $query->execute();
+            $lastConversationId = BDD::getInstance()->lastInsertId();
+
+            // ajout de l'utilisateur à la conv
+            $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $query->bindValue(':conversationId', $lastConversationId);
+            $query->bindValue(':userId', $userId);
+            $query->execute();
+
+            return $lastConversationId;
+        } catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
 
     public static function SqlAdd(Conversation $conversation, int $userId, int $recipientId) // on est sur que la conv existe pas à ce moment la
     {
@@ -360,7 +396,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlAddUser(int $userId, int $conversationId) // peut etre vérifier que le $conversationId existe bien
+    public static function SqlAddUserToGroup(int $userId, int $conversationId) // peut etre vérifier que le $conversationId existe bien et qu'on est bien sur une conv de groupe !
     {
 
         try {
@@ -436,7 +472,34 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function exists($userId1, $userId2) : bool // on vérifie si une conv à 2 existe déjà
+
+    public static function selfExists(int $userId)
+    {
+        try {
+            // Vérifie si une association existe déjà
+            $selfConversationExistQuery = BDD::getInstance()->prepare('
+                SELECT COUNT(*) 
+                FROM conversations_users cu
+                JOIN conversations c
+                    on cu.conversation_id = c.id
+                WHERE 
+                    user_id = :userId
+                    AND c.type = 1
+            ');
+            $selfConversationExistQuery->bindValue(':userId', $userId);
+            $selfConversationExistQuery->execute();
+            if ($selfConversationExistQuery->fetchColumn() > 0) {
+                return true;
+            }
+            return false;
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+
+    public static function exists(int $userId1, int $userId2) : bool // on vérifie si une conv à 2 existe déjà
     {
         try {
             // Vérifie si une association existe déjà
@@ -512,7 +575,31 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlGetIdByUsersId(int $userId1, int $userId2) // récupềre une conv privée avec les ids des 2 users
+    public static function SqlGetSelfIdByUserId(int $userId)
+    {
+        try {
+            $query = BDD::getInstance()->prepare('
+                SELECT c.id
+                FROM conversations_users cu
+                JOIN conversations c
+                    on cu.conversation_id = c.id
+                WHERE 
+                    user_id = :userId
+                    AND c.type = 1
+            ');
+            $query->bindValue(':userId', $userId);
+            $query->execute();
+
+            $result = $query->fetch(\PDO::FETCH_ASSOC);
+            return $result['id'];
+        }
+        catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+
+    public static function SqlGetIdByUsersId(int $userId1, int $userId2) // récupềre une conv à 2 avec les ids des 2 users
     {
         try {
             $query = BDD::getInstance()->prepare('
@@ -538,7 +625,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function getSqlImageRepository(int $conversationId)
+    public static function getSqlImageRepositoryById(int $conversationId)
     {
         try {
             $query = BDD::getInstance()->prepare("SELECT image_repository FROM conversations WHERE id = :conversationId");
@@ -552,7 +639,8 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function getSqlImageName(int $conversationId)
+
+    public static function getSqlImageNameById(int $conversationId)
     {
         try {
             $query = BDD::getInstance()->prepare("SELECT image_file_name FROM conversations WHERE id = :conversationId");
@@ -589,6 +677,7 @@ class Conversation implements JsonSerializable
                     SELECT 
                         c.id,
                         CASE 
+                            WHEN c.type = 1 THEN u.username
                             WHEN c.type = 3 THEN c.name
                             ELSE (SELECT u.username 
                                   FROM users u 
@@ -597,6 +686,7 @@ class Conversation implements JsonSerializable
                                   LIMIT 1) 
                         END AS conversation_name,
                         CASE 
+                            WHEN c.type = 1 THEN u.image_repository
                             WHEN c.type = 3 THEN c.image_repository
                             ELSE (SELECT u.image_repository 
                                   FROM users u 
@@ -605,6 +695,7 @@ class Conversation implements JsonSerializable
                                   LIMIT 1) 
                         END AS image_repository,
                         CASE 
+                            WHEN c.type = 1 THEN u.image_file_name
                             WHEN c.type = 3 THEN c.image_file_name
                             ELSE (SELECT u.image_file_name 
                                   FROM users u 
@@ -625,6 +716,7 @@ class Conversation implements JsonSerializable
                         m_last.updated_at AS last_message_update
                     FROM conversations c
                     JOIN conversations_users cu ON c.id = cu.conversation_id
+                    JOIN users u ON u.id = cu.user_id
                     LEFT JOIN messages m_last ON c.id = m_last.conversation_id 
                         AND m_last.created_at = (
                             SELECT MAX(m.created_at) 
@@ -634,6 +726,7 @@ class Conversation implements JsonSerializable
                     WHERE cu.user_id = :userId
                         AND (
                             CASE 
+                                WHEN c.type = 1 THEN u.username
                                 WHEN c.type = 3 THEN c.name
                                 ELSE (SELECT u.username 
                                       FROM users u 
