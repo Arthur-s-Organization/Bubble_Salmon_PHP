@@ -130,6 +130,11 @@ class ConversationController
             throw new ApiException("A group conversation must have at least 3 users", 400);
         }
 
+        if (count($jsonDatasObj->RecipientIds) !== count(array_unique($jsonDatasObj->RecipientIds)))
+        {
+            throw new ApiException("User list provided contains duplicates", 400);
+        }
+
         $recipentsIds = $jsonDatasObj->RecipientIds;
 
         $sqlRepository = null;
