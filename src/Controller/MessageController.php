@@ -35,6 +35,10 @@ class MessageController {
             throw new ApiException("Missing required fields : ConversationId is required", 400);
         }
 
+        if (!isset($jsonDatasObj->Text) and (!isset($jsonDatasObj->Image))){
+            throw new ApiException("Missing required fields : Text or Image is required", 400);
+        }
+
         $sqlRepository = null;
         $imageName = null;
         $now = new \DateTime();
