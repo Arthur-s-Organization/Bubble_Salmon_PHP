@@ -54,10 +54,17 @@ class MessageController {
             fclose($ifp);
         }
 
+        if(!isset($jsonDatasObj->Text)){
+            $content = null;
+        }
+        else {
+            $content = $jsonDatasObj->Text;
+        }
+
         $message = new Message();
         $message->setUserId((int)$tokensDatas->id)
             ->setConversationId($jsonDatasObj->ConversationId)
-            ->setText($jsonDatasObj->Text)
+            ->setText($content)
             ->setImageRepository($sqlRepository)
             ->setImageFileName($imageName)
             ->setCreatedAt($now)
