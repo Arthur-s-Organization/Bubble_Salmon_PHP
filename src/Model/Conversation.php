@@ -582,28 +582,100 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlGetFileredConversations(string $filter) // pb ! on renvoie juste les conversations et pas les noms des users
+    public static function SqlGetFileredConversations(string $filter, int $userId) // pb ! on renvoie juste les conversations et pas les noms des users
     {
         try {
-            $query = BDD::getInstance()->prepare("SELECT * FROM users WHERE username LIKE :filter");
+            $query = BDD::getInstance()->prepare("  
+                    SELECT 
+                        c.id,
+                        CASE 
+                            WHEN c.type = 3 THEN c.name
+                            ELSE (SELECT u.username 
+                                  FROM users u 
+                                  JOIN conversations_users cu ON u.id = cu.user_id 
+                                  WHERE cu.conversation_id = c.id AND u.id <> :userId
+                                  LIMIT 1) 
+                        END AS conversation_name,
+                        CASE 
+                            WHEN c.type = 3 THEN c.image_repository
+                            ELSE (SELECT u.image_repository 
+                                  FROM users u 
+                                  JOIN conversations_users cu ON u.id = cu.user_id 
+                                  WHERE cu.conversation_id = c.id AND u.id <> :userId
+                                  LIMIT 1) 
+                        END AS image_repository,
+                        CASE 
+                            WHEN c.type = 3 THEN c.image_file_name
+                            ELSE (SELECT u.image_file_name 
+                                  FROM users u 
+                                  JOIN conversations_users cu ON u.id = cu.user_id 
+                                  WHERE cu.conversation_id = c.id AND u.id <> :userId
+                                  LIMIT 1) 
+                        END AS image_file_name,
+                        c.created_at,
+                        c.updated_at,
+                        c.type,
+                        m_last.id AS last_message_id,
+                        m_last.text AS last_message,
+                        m_last.conversation_id AS last_message_conversation_id,
+                        m_last.user_id AS last_message_user_id,
+                        m_last.image_repository AS last_message_image_repository,
+                        m_last.image_file_name AS last_message_image_file_name,
+                        m_last.created_at AS last_message_date,
+                        m_last.updated_at AS last_message_update
+                    FROM conversations c
+                    JOIN conversations_users cu ON c.id = cu.conversation_id
+                    LEFT JOIN messages m_last ON c.id = m_last.conversation_id 
+                        AND m_last.created_at = (
+                            SELECT MAX(m.created_at) 
+                            FROM messages m 
+                            WHERE m.conversation_id = c.id
+                        )
+                    WHERE cu.user_id = :userId
+                        AND (
+                            CASE 
+                                WHEN c.type = 3 THEN c.name
+                                ELSE (SELECT u.username 
+                                      FROM users u 
+                                      JOIN conversations_users cu ON u.id = cu.user_id 
+                                      WHERE cu.conversation_id = c.id AND u.id <> :userId
+                                      LIMIT 1) 
+                            END
+                        ) LIKE :filter
+                    ORDER BY  c.updated_at desc
+            ");
+
+            $query->bindValue(':userId', $userId);
+//            $query->bindValue(':username', $username);
             $query->bindValue(':filter', "%{$filter}%");
             $query->execute();
 
-            $sqlConversations = $query->fetchAll(\PDO::FETCH_ASSOC);
-            if ($sqlConversations !== false) {
-                $conversations = [];
-                foreach ($sqlConversations as $sqlConversation) {
-                    $conversation = new Conversation();
-                    $conversation->setId($sqlConversation['id'])
-                        ->setName($sqlConversation['name'])
-                        ->setImageRepository($sqlConversation["image_repository"])
-                        ->setImageFileName($sqlConversation["image_file_name"])
-                        ->setCreatedAt(new \DateTime($sqlConversation["created_at"]))
-                        ->setupdatedAt(new \DateTime($sqlConversation["updated_at"]));
-                    $conversations[] = $conversation;
-                }
-                return $conversations;
+            $conversationsSql = $query->fetchAll(\PDO::FETCH_ASSOC);
+            $conversationsObject = [];
+            foreach ($conversationsSql as $conversationSql) {
+
+                $lastMessage = new Message();
+                $lastMessage->setText($conversationSql['last_message'])
+                    ->setId($conversationSql['last_message_id'])
+                    ->setConversationId($conversationSql['last_message_conversation_id'])
+                    ->setUserId($conversationSql['last_message_user_id'])
+                    ->setImageFileName($conversationSql['last_message_image_file_name'])
+                    ->setImageRepository($conversationSql['last_message_image_repository'])
+                    ->setUpdatedAt($conversationSql['last_message_update'] ? new \DateTime($conversationSql['last_message_update']) : null)
+                    ->setCreatedAt($conversationSql['last_message_date'] ? new \DateTime($conversationSql['last_message_date']) : null);
+
+                $conversation = new Conversation();
+                $conversation->setName($conversationSql["conversation_name"])
+                    ->setId($conversationSql["id"])
+                    ->setImageRepository($conversationSql["image_repository"])
+                    ->setImageFileName($conversationSql["image_file_name"])
+                    ->setcreatedAt(new \DateTime($conversationSql["created_at"]))
+                    ->setupdatedAt(new \DateTime($conversationSql["updated_at"]))
+                    ->setType($conversationSql["type"])
+                    ->setLastMessage($lastMessage);
+                $conversationsObject[] = $conversation;
             }
+            return $conversationsObject;
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }

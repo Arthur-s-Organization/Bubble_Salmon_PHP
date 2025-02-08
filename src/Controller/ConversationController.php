@@ -238,9 +238,10 @@ class ConversationController
             throw new ApiException("Method GET expected", 405);
         }
 
-        JwtService::checkToken();
+        $tokensDatas = JwtService::checkToken();
+        $userId = (int)$tokensDatas->id;
 
-        $users = Conversation::SqlGetFileredUsers($filter);
+        $users = Conversation::SqlGetFileredConversations($filter, $userId);
 
         return json_encode($users);
     }
