@@ -106,7 +106,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlGetAllbyUserId(int $userId, string $username)
+    public static function SqlGetAllbyUserId(int $userId)
     {
         try {
             $query = BDD::getInstance()->prepare("  
@@ -165,7 +165,6 @@ class Conversation implements JsonSerializable
             ");
 
             $query->bindValue(':userId', $userId);
-            $query->bindValue(':username', $username);
             $query->execute();
 
             $conversationsSql = $query->fetchAll(\PDO::FETCH_ASSOC);
@@ -201,7 +200,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlGetById(int $conversationId, string $username, int $userId)
+    public static function SqlGetById(int $conversationId, int $userId)
     {
         try {
             // Vérifie si l'association existe bien : que l'utilisateur appartient bien à la conv
