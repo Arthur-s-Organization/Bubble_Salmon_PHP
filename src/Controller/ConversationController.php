@@ -15,7 +15,7 @@ class ConversationController
     }
 
 
-    public function getAll() // récupère toutes les conversations de l'utilisateur (nom de la conv ou nom du desti suivant le type de conv) (avec le dernier message )
+    public function getAll() // récupère toutes les conversations de l'utilisateur (nom de la conv ou nom du desti suivant le type de conv) ,avec le dernier message envoyé
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
@@ -67,16 +67,37 @@ class ConversationController
         $recipentId = $jsonDatasObj->RecipientId;
         $now = new \DateTime();
 
-        if (Conversation::exists($userId, $recipentId)) {
-            // recup l'id de conversation existante entre les deux users
-            $conversationId = Conversation::SqlGetIdByUsersId($userId, $recipentId);
+        //cas au on créé une self conv
+        if ($userId === $recipentId)
+        {
+            if (Conversation::selfExists($userId))
+            {
+                $conversationId = Conversation::SqlGetSelfIdByUserId($userId);
+            }
+            else
+            {
+                $conversation = new Conversation();
+                $conversation->setType(1)
+                    ->setCreatedAt($now)
+                    ->setUpdatedAt($now);
+                $conversationId = Conversation::SqlAddSelf($conversation, $userId);
+            }
         }
-        else {
-            $conversation = new Conversation();
-            $conversation->setType(2)
-                ->setCreatedAt($now)
-                ->setUpdatedAt($now);
-            $conversationId = Conversation::SqlAdd($conversation, $userId, $recipentId);
+        // cas ou on créé une conv à 2
+        else
+        {
+            if (Conversation::exists($userId, $recipentId)) {
+                // recup l'id de conversation existante entre les deux users
+                $conversationId = Conversation::SqlGetIdByUsersId($userId, $recipentId);
+            }
+            else
+            {
+                $conversation = new Conversation();
+                $conversation->setType(2)
+                    ->setCreatedAt($now)
+                    ->setUpdatedAt($now);
+                $conversationId = Conversation::SqlAdd($conversation, $userId, $recipentId);
+            }
         }
 
         $conversation = Conversation::SqlGetById($conversationId, $username, $userId);
@@ -101,7 +122,7 @@ class ConversationController
         }
 
         if (!isset($jsonDatasObj->Name) || !isset($jsonDatasObj->RecipientIds)){
-            throw new ApiException("Missing required fields : RecipientIds is required", 400);
+            throw new ApiException("Missing required fields : Name and RecipientIds are required", 400);
         }
 
         if (count($jsonDatasObj->RecipientIds) < 2)
@@ -165,7 +186,7 @@ class ConversationController
         $userId = $jsonDatasObj->UserId;
         $conversationId = $jsonDatasObj->ConversationId;
 
-        Conversation::SqlAddUser($userId, $conversationId);
+        Conversation::SqlAddUserToGroup($userId, $conversationId);
         return json_encode(["status" => "success", "message" => "User $userId succesfuly add to conversation $conversationId"]);
     }
 
@@ -185,8 +206,8 @@ class ConversationController
         }
 
         // ici on récupére le path et le nom actuel de l'image
-        $oldSqlRepository = Conversation::getSqlImageRepository($conversationId);
-        $oldSqlImageName = Conversation::getSqlImageName($conversationId);
+        $oldSqlRepository = Conversation::getSqlImageRepositoryById($conversationId);
+        $oldSqlImageName = Conversation::getSqlImageNameById($conversationId);
 
         $sqlRepository = $oldSqlRepository;
         $imageName = $oldSqlImageName;
@@ -245,6 +266,9 @@ class ConversationController
 
         return json_encode($users);
     }
+
+
+
 
     //    public function add() // créé une nouvelle conversation à deux (l'utilisateur connecté plus un autre)
 //    {
