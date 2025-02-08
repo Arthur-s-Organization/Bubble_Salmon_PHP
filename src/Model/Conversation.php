@@ -197,6 +197,7 @@ class Conversation implements JsonSerializable
 
     }
 
+
     public static function SqlGetById(int $conversationId, string $username, int $userId)
     {
         try {
@@ -262,7 +263,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlAdd(Conversation $conversation, int $userId, int $recipientId) // on est sur que la conv existe pas pas à ce moment la
+    public static function SqlAdd(Conversation $conversation, int $userId, int $recipientId) // on est sur que la conv existe pas à ce moment la
     {
         try {
             $db = BDD::getInstance();
@@ -313,8 +314,10 @@ class Conversation implements JsonSerializable
         try {
             $db = BDD::getInstance();
 
+             $recipentIds[] = $userId;
+
+            // Vérifie si les destinataires existent
             foreach ($recipentIds as $recipentId) {
-                // Vérifie si les destinataires existe
                 $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :userId');
                 $userCheck->bindValue(':userId', $recipentId);
                 $userCheck->execute();
@@ -323,7 +326,8 @@ class Conversation implements JsonSerializable
                 }
             }
 
-            if (Conversation::Groupexists($recipentIds)) // On vérifie si ce groupe de conversation que l'on veut créé existe deja
+            // On vérifie si ce groupe de conversation que l'on veut créé existe deja
+            if (Conversation::Groupexists($recipentIds))
             {
                 throw new ApiException("A Conversation with this users already exists", 404);
             }
@@ -341,13 +345,7 @@ class Conversation implements JsonSerializable
             $query->execute();
             $lastConversationId = BDD::getInstance()->lastInsertId();
 
-            // ajout de l'utilisateur connecté à la conv
-            $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
-            $query->bindValue(':conversationId', $lastConversationId);
-            $query->bindValue(':userId', $userId);
-            $query->execute();
-
-            // ajout des autres destinataires de la conv
+            // ajout des users à la conv
             foreach ($recipentIds as $recipentId) {
                 $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
                 $query->bindValue(':conversationId', $lastConversationId);
@@ -362,19 +360,11 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function SqlAddUser(int $userId, int $conversationId)
+    public static function SqlAddUser(int $userId, int $conversationId) // peut etre vérifier que le $conversationId existe bien
     {
 
         try {
             $db = BDD::getInstance();
-
-            // Vérifie si la conversation existe
-            $conversationCheck = $db->prepare('SELECT COUNT(*) FROM conversations WHERE id = :conversationId');
-            $conversationCheck->bindValue(':conversationId', $conversationId);
-            $conversationCheck->execute();
-            if ($conversationCheck->fetchColumn() === 0) {
-                throw new ApiException("ConversationId {$conversationId} doesn''t exist", 404);
-            }
 
             // Vérifie si l'utilisateur existe
             $userCheck = $db->prepare('SELECT COUNT(*) FROM users WHERE id = :userId');
@@ -384,7 +374,15 @@ class Conversation implements JsonSerializable
                 throw new ApiException("UserId {$userId} doesn''t exist", 404);
             }
 
-            // Vérifie si une association existe déjà
+            // verifie que la conversation existe bien
+            $conversationCheck = $db->prepare('SELECT COUNT(*) FROM conversations WHERE id = :conversationId');
+            $conversationCheck->bindValue(':conversationId', $conversationId);
+            $conversationCheck->execute();
+            if ($conversationCheck->fetchColumn() === 0) {
+                throw new ApiException("Conversation {$conversationId} doesn't exist", 404);
+            }
+
+            // Vérifie que l'utilisateur n'existe pas déjà dans cette conversation
             $associationCheck = $db->prepare('SELECT COUNT(*) FROM conversations_users WHERE conversation_id = :conversationId AND user_id = :userId');
             $associationCheck->bindValue(':conversationId', $conversationId);
             $associationCheck->bindValue(':userId', $userId);
@@ -393,15 +391,33 @@ class Conversation implements JsonSerializable
                 throw new ApiException("User {$userId} already belongs to conversation {$conversationId}", 409);
             }
 
-            $query = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
-            $query->bindValue(':conversationId', $conversationId);
-            $query->bindValue(':userId', $userId);
-            $query->execute();
+            // récupérer un tableau de tous les utilisateurs de la conv et ajouter le nouveau
+            $usersQuery = $db->prepare('
+                SELECT user_id  
+                FROM conversations_users
+                WHERE conversation_id = :conversationId
+             ');
+            $usersQuery->bindValue(':conversationId', $conversationId);
+            $usersQuery->execute();
+            $userIds = $usersQuery->fetchAll(\PDO::FETCH_COLUMN);
+            $userIds[] = $userId;
+
+            // Vérifie si cette nouvelle conversation n'existe pas déjà
+            $newConversationExists = Conversation::Groupexists($userIds);
+            if ($newConversationExists) {
+                throw new ApiException("This conversation already exists", 409);
+            }
+
+            $userAddQuery = $db->prepare('INSERT INTO conversations_users (conversation_id, user_id) VALUES (:conversationId, :userId)');
+            $userAddQuery->bindValue(':conversationId', $conversationId);
+            $userAddQuery->bindValue(':userId', $userId);
+            $userAddQuery->execute();
         } catch (\PDOException $e) {
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
 
     }
+
 
     public static function SqlUpdate(Conversation $conversation)
     {
@@ -447,39 +463,51 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function Groupexists(array $userIds): bool  // on vérifie si une conv de groupe existe déjà
-    {
-        try {
-            // Générer les placeholders pour chaque user_id
-            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
 
-            // Connexion à la base de données
+    public static function Groupexists(array $userIds): bool
+    {
+        if (empty($userIds)) {
+            return false;
+        }
+
+        try {
             $bdd = BDD::getInstance();
 
-            // Requête SQL avec les placeholders dynamiques
-            $associationCheck = $bdd->prepare('
-                SELECT conversation_id
-                FROM conversations_users
-                WHERE user_id IN (' . $placeholders . ') 
-                GROUP BY conversation_id
-                HAVING COUNT(DISTINCT user_id) = ?
-        ');
+            // Générer une liste de placeholders dynamiquement pour les paramètres
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
 
-            // Lier les valeurs des userIds aux placeholders
+            $sql = "
+            WITH given_users AS (
+                SELECT ? AS user_id UNION ALL " . implode(" UNION ALL ", array_fill(0, count($userIds) - 1, "SELECT ?")) . "
+            ),
+            conversation_matches AS (
+                SELECT cu.conversation_id
+                FROM conversations_users cu
+                JOIN given_users gu ON cu.user_id = gu.user_id
+                GROUP BY cu.conversation_id
+                HAVING COUNT(*) = (SELECT COUNT(*) FROM given_users)
+            )
+            SELECT c.id
+            FROM conversations c
+            JOIN conversation_matches cm ON c.id = cm.conversation_id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM conversations_users cu
+                WHERE cu.conversation_id = c.id
+                AND cu.user_id NOT IN (SELECT user_id FROM given_users)
+            )
+        ";
+
+            $query = $bdd->prepare($sql);
+
+            // Assigner les valeurs des utilisateurs dynamiquement
             foreach ($userIds as $index => $userId) {
-                $associationCheck->bindValue($index + 1, $userId, \PDO::PARAM_INT);
+                $query->bindValue($index + 1, $userId, \PDO::PARAM_INT);
             }
 
-            // Lier le nombre d'utilisateurs (dernier paramètre, également positionnel)
-            $associationCheck->bindValue(count($userIds) + 1, count($userIds), \PDO::PARAM_INT);
-
-            // Exécuter la requête
-            $associationCheck->execute();
-
-            // Vérifie si la conversation existe
-            return $associationCheck->fetchColumn() !== false;
+            $query->execute();
+            return $query->fetchColumn() !== false;
         } catch (\PDOException $e) {
-            throw new ApiException('Database Error test: ' . $e->getMessage(), 500);
+            throw new ApiException('Database Error: ' . $e->getMessage(), 500);
         }
     }
 
@@ -509,6 +537,7 @@ class Conversation implements JsonSerializable
         }
     }
 
+
     public static function getSqlImageRepository(int $conversationId)
     {
         try {
@@ -537,6 +566,7 @@ class Conversation implements JsonSerializable
         }
     }
 
+
     public static function SqlGetNamebyId(int $conversationId)
     {
         try {
@@ -550,6 +580,7 @@ class Conversation implements JsonSerializable
             throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
         }
     }
+
 
     public static function SqlGetFileredConversations(string $filter) // pb ! on renvoie juste les conversations et pas les noms des users
     {

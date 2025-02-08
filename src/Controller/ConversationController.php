@@ -143,7 +143,7 @@ class ConversationController
     }
 
 
-    public function addUser() // Ajoute un user à une conversation
+    public function addUser() // Ajoute un user à une conversation de groupe
     {
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             throw new ApiException("Method POST expected", 405);
