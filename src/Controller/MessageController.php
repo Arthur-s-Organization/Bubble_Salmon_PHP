@@ -74,7 +74,7 @@ class MessageController {
             ->setCreatedAt($now)
             ->setUpdatedAt($now);
 
-        $id = Message::SqlAdd($message);
+        $id = Message::sqlAdd($message);
         return json_encode(["code" => 0, "Message" => "Message ajouté avec succès", "Id" => $id]);
     }
 
@@ -87,7 +87,7 @@ class MessageController {
         $tokensDatas = JwtService::checkToken();
         $userId = (int)$tokensDatas->id;
 
-        $messages = Message::SqlGetAllByConversationId($conversationId, $userId);
+        $messages = Message::sqlGetAllByConversationId($conversationId, $userId);
         return json_encode($messages);
     }
 }

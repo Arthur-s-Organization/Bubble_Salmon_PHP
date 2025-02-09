@@ -114,7 +114,7 @@ class Message implements JsonSerializable{
         return $this;
     }
 
-    public static function SqlAdd(Message $message){
+    public static function sqlAdd(Message $message){
         try {
 
             $conversationExistQuery= BDD::getInstance()->prepare('
@@ -164,7 +164,7 @@ class Message implements JsonSerializable{
         }
     }
 
-    public static function SqlGetAllByConversationId(int $conversationId, $userId) {
+    public static function sqlGetAllByConversationId(int $conversationId, $userId) {
         try {
             $conversationExistQuery= BDD::getInstance()->prepare('
                 SELECT COUNT(*) 

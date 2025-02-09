@@ -23,7 +23,7 @@ class ConversationController
 
         $tokensDatas = JwtService::checkToken();
 
-        $conversations = Conversation::SqlGetAllbyUserId((int)$tokensDatas->id);
+        $conversations = Conversation::sqlGetAllbyUserId((int)$tokensDatas->id);
         return json_encode($conversations);
     }
 
@@ -38,7 +38,7 @@ class ConversationController
         $username = (string)$tokensDatas->username;
         $userId = (int)$tokensDatas->id;
 
-        $conversation = Conversation::SqlGetById($conversationId, $userId);
+        $conversation = Conversation::sqlGetById($conversationId, $userId);
         return json_encode($conversation);
     }
 
@@ -70,9 +70,9 @@ class ConversationController
         //cas au on créé une self conv
         if ($userId === $recipentId)
         {
-            if (Conversation::selfExists($userId))
+            if (Conversation::sqlSelfExists($userId))
             {
-                $conversationId = Conversation::SqlGetSelfIdByUserId($userId);
+                $conversationId = Conversation::sqlGetSelfIdByUserId($userId);
             }
             else
             {
@@ -80,15 +80,15 @@ class ConversationController
                 $conversation->setType(1)
                     ->setCreatedAt($now)
                     ->setUpdatedAt($now);
-                $conversationId = Conversation::SqlAddSelf($conversation, $userId);
+                $conversationId = Conversation::sqlAddSelf($conversation, $userId);
             }
         }
         // cas ou on créé une conv à 2
         else
         {
-            if (Conversation::exists($userId, $recipentId)) {
+            if (Conversation::sqlExists($userId, $recipentId)) {
                 // recup l'id de conversation existante entre les deux users
-                $conversationId = Conversation::SqlGetIdByUsersId($userId, $recipentId);
+                $conversationId = Conversation::sqlGetIdByUsersId($userId, $recipentId);
             }
             else
             {
@@ -96,11 +96,11 @@ class ConversationController
                 $conversation->setType(2)
                     ->setCreatedAt($now)
                     ->setUpdatedAt($now);
-                $conversationId = Conversation::SqlAdd($conversation, $userId, $recipentId);
+                $conversationId = Conversation::sqlAdd($conversation, $userId, $recipentId);
             }
         }
 
-        $conversation = Conversation::SqlGetById($conversationId, $userId);
+        $conversation = Conversation::sqlGetById($conversationId, $userId);
         return json_encode($conversation);
     }
 
@@ -164,7 +164,7 @@ class ConversationController
             ->setUpdatedAt($now)
             ->setType(3);
 
-        $conversationId = Conversation::SqlAddGroup($conversation, $recipentsIds, $userId);
+        $conversationId = Conversation::sqlAddGroup($conversation, $recipentsIds, $userId);
         return json_encode(["status" => "success", "Message" => "Conversation successfully added", "conversationId" => $conversationId]);
     }
 
@@ -191,7 +191,7 @@ class ConversationController
         $userId = $jsonDatasObj->UserId;
         $conversationId = $jsonDatasObj->ConversationId;
 
-        Conversation::SqlAddUserToGroup($userId, $conversationId);
+        Conversation::sqlAddUserToGroup($userId, $conversationId);
         return json_encode(["status" => "success", "message" => "User $userId succesfuly add to conversation $conversationId"]);
     }
 
@@ -239,7 +239,7 @@ class ConversationController
             }
         }
 
-        $oldName = Conversation::SqlGetNamebyId($conversationId);
+        $oldName = Conversation::sqlGetNamebyId($conversationId);
         if (isset($jsonDatasObj->Name)) { // ternaire non ?
             $name = $jsonDatasObj->Name;
         }
@@ -254,7 +254,7 @@ class ConversationController
             ->setImageFileName($imageName)
             ->setUpdatedAt($now);
 
-       Conversation::SqlUpdate($conversation);
+       Conversation::sqlUpdate($conversation);
         return json_encode(["status" => "success", "Message" => "Conversation successfully Updated", "conversationId" => $conversationId]);
     }
 
