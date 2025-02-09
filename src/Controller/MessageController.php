@@ -35,6 +35,10 @@ class MessageController {
             throw new ApiException("Missing required fields : ConversationId is required", 400);
         }
 
+        if (!isset($jsonDatasObj->Text) and (!isset($jsonDatasObj->Image))){
+            throw new ApiException("Missing required fields : Text or Image is required", 400);
+        }
+
         $sqlRepository = null;
         $imageName = null;
         $now = new \DateTime();
@@ -70,7 +74,7 @@ class MessageController {
             ->setCreatedAt($now)
             ->setUpdatedAt($now);
 
-        $id = Message::SqlAdd($message);
+        $id = Message::sqlAdd($message);
         return json_encode(["code" => 0, "Message" => "Message ajouté avec succès", "Id" => $id]);
     }
 
@@ -80,9 +84,10 @@ class MessageController {
             throw new ApiException("Method GET expected", 405);
         }
 
-        JwtService::checkToken();
+        $tokensDatas = JwtService::checkToken();
+        $userId = (int)$tokensDatas->id;
 
-        $messages = Message::SqlGetAllByConversationId($conversationId);
+        $messages = Message::sqlGetAllByConversationId($conversationId, $userId);
         return json_encode($messages);
     }
 }

@@ -89,7 +89,7 @@ class UserController {
             throw new ApiException("Missing required fields : Username and Password are required", 400);
         }
 
-        $user = User::SqlGetByUsername($jsonDatasObj->Username);
+        $user = User::sqlGetByUsername($jsonDatasObj->Username);
         if($user === null) {
             throw new ApiException("The provided username does not exist in our system", 403);
         }
@@ -114,7 +114,7 @@ class UserController {
 
         JwtService::checkToken();
 
-        $users = User::SqlGetAll();
+        $users = User::sqlGetAll();
         return json_encode($users);
     }
 
@@ -128,7 +128,7 @@ class UserController {
         $tokensDatas = JwtService::checkToken();
         $userId = (int)$tokensDatas->id;
 
-        $user = User::SqlGetById($userId);
+        $user = User::sqlGetById($userId);
         if($user === null) {
             throw new ApiException("User not found in our system. Please check your credentials and try again.", 403);
         }
@@ -143,7 +143,7 @@ class UserController {
         }
         JwtService::checkToken();
 
-        $user = User::SqlGetById($userId);
+        $user = User::sqlGetById($userId);
         if($user === null) {
             throw new ApiException("User not found in our system. Please check your credentials and try again.", 403);
         }
@@ -158,7 +158,7 @@ class UserController {
 
         JwtService::checkToken();
 
-        $users = User::SqlGetFileredUsers($filter);
+        $users = User::sqlGetFileredUsers($filter);
 
         return json_encode($users);
     }
