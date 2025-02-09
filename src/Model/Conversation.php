@@ -408,12 +408,12 @@ class Conversation implements JsonSerializable
                 throw new ApiException("UserId {$userId} doesn''t exist", 404);
             }
 
-            // verifie que la conversation existe bien
-            $conversationCheck = $db->prepare('SELECT COUNT(*) FROM conversations WHERE id = :conversationId');
+            // verifie que la conversation existe bien (et que c'est une conv de groupe !)
+            $conversationCheck = $db->prepare('SELECT COUNT(*) FROM conversations WHERE id = :conversationId AND type = 3');
             $conversationCheck->bindValue(':conversationId', $conversationId);
             $conversationCheck->execute();
             if ($conversationCheck->fetchColumn() === 0) {
-                throw new ApiException("Conversation {$conversationId} doesn't exist", 404);
+                throw new ApiException("Group conversation {$conversationId} doesn't exist", 404);
             }
 
             // Vérifie que l'utilisateur n'existe pas déjà dans cette conversation
