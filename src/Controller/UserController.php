@@ -33,6 +33,13 @@ class UserController {
             throw new ApiException("Missing required fields", 400);
         }
 
+        if (User::sqlPhoneExists($jsonDatasObj->Phone)) {
+            throw new ApiException("Phone already exists", 400);
+        }
+
+        if(User::sqlUsernameExists($jsonDatasObj->Username)) {
+            throw new ApiException("Username already exists", 400);
+        }
 
         if (!StringValidator::isOnlyLetters($jsonDatasObj->Firstname)) {
             throw new ApiException("The 'Firstname' field must contain only letters and no special characters or numbers.", 400);
