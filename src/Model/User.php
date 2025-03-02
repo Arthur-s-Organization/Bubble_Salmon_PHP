@@ -283,6 +283,32 @@ class User  implements JsonSerializable {
         }
     }
 
+    public static function sqlPhoneExists(string $phone): bool {
+        try {
+            $getPhoneQuery = BDD::getInstance()->prepare("SELECT COUNT(*) FROM users WHERE phone = :phone");
+            $getPhoneQuery->bindValue(':phone', $phone);
+            $getPhoneQuery->execute();
+
+            $count = $getPhoneQuery->fetchColumn();
+            return $count > 0;
+        } catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function sqlUsernameExists(string $username): bool {
+        try {
+            $getUsernameQuery = BDD::getInstance()->prepare("SELECT COUNT(*) FROM users WHERE username = :username");
+            $getUsernameQuery->bindValue(':username', $username);
+            $getUsernameQuery->execute();
+
+            $count = $getUsernameQuery->fetchColumn();
+            return $count > 0;
+        } catch (\PDOException $e) {
+            throw new ApiException('DataBase Error : ' . $e->getMessage(), 500);
+        }
+    }
+
     public function jsonSerialize(): array
     {
         return [
