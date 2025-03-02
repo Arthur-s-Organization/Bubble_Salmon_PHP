@@ -203,7 +203,7 @@ class Conversation implements JsonSerializable
     public static function sqlGetById(int $conversationId, int $userId)
     {
         try {
-            // Vérifie si l'association existe bien : que l'utilisateur appartient bien à la conv
+            // Vérifie si l'association existe bien : que l'utilisateur appartient bien à la conversation
             $userBelongToConversationQuery = BDD::getInstance()->prepare('SELECT COUNT(*) FROM conversations_users WHERE conversation_id = :conversationId AND user_id = :userId');
             $userBelongToConversationQuery->bindValue(':conversationId', $conversationId);
             $userBelongToConversationQuery->bindValue(':userId', $userId);
@@ -298,7 +298,7 @@ class Conversation implements JsonSerializable
         }
     }
 
-    public static function sqlAdd(Conversation $conversation, int $userId, int $recipientId) // on est sur que la conv existe pas à ce moment la
+    public static function sqlAdd(Conversation $conversation, int $userId, int $recipientId)
     {
         try {
             $db = BDD::getInstance();
@@ -344,8 +344,7 @@ class Conversation implements JsonSerializable
 
 
     public static function sqlAddGroup(Conversation $conversation, array $recipentIds, int $userId)
-    { // penser ajout de la logique de vérification pour ne pas créer de conv redondante
-
+    {
         try {
             $db = BDD::getInstance();
 
@@ -395,7 +394,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function sqlAddUserToGroup(int $userId, int $conversationId) // peut etre vérifier que le $conversationId existe bien et qu'on est bien sur une conv de groupe !
+    public static function sqlAddUserToGroup(int $userId, int $conversationId)
     {
         try {
             $db = BDD::getInstance();
@@ -425,7 +424,6 @@ class Conversation implements JsonSerializable
                 throw new ApiException("User {$userId} already belongs to conversation {$conversationId}", 409);
             }
 
-            // récupérer un tableau de tous les utilisateurs de la conv et ajouter le nouveau
             $usersQuery = $db->prepare('
                 SELECT user_id  
                 FROM conversations_users
@@ -668,7 +666,7 @@ class Conversation implements JsonSerializable
     }
 
 
-    public static function sqlGetFileredConversations(string $filter, int $userId) // pb ! on renvoie juste les conversations et pas les noms des users
+    public static function sqlGetFileredConversations(string $filter, int $userId)
     {
         try {
             $getFiltredConvQuery = BDD::getInstance()->prepare("  
@@ -737,7 +735,6 @@ class Conversation implements JsonSerializable
             ");
 
             $getFiltredConvQuery->bindValue(':userId', $userId);
-//            $query->bindValue(':username', $username);
             $getFiltredConvQuery->bindValue(':filter', "%{$filter}%");
             $getFiltredConvQuery->execute();
 
@@ -788,70 +785,3 @@ class Conversation implements JsonSerializable
     }
 
 }
-
-
-//            SELECT
-//              DISTINCT
-//                c.id,
-//                CASE
-//                    WHEN LENGTH(c.name)>1 THEN c.name
-//                    ELSE u.username
-//                END conversations_name,
-//                CASE
-//                    WHEN LENGTH(c.name)>1 THEN c.image_repository
-//                    ELSE u.image_repository
-//                END image_repository,
-//                CASE
-//                    WHEN LENGTH(c.name)>1 THEN c.image_file_name
-//                    ELSE u.image_file_name
-//                END image_file_name,
-//                c.created_at,
-//                c.updated_at,
-//                c.type,
-//                m_last.id AS last_message_id,
-//                m_last.text AS last_message,
-//                m_last.conversation_id AS last_message_conversation_id,
-//                m_last.user_id AS last_message_user_id,
-//                m_last.image_repository AS last_message_image_repository,
-//                m_last.image_file_name AS last_message_image_file_name,
-//                m_last.created_at AS last_message_date,
-//                m_last.updated_at AS last_message_update
-//
-//              FROM conversations c
-//              JOIN conversations_users cu on c.id = cu.conversation_id
-//              JOIN users u on cu.user_id = u.id
-//              LEFT JOIN messages m_last ON c.id = m_last.conversation_id
-//                        AND m_last.created_at = (
-//                            SELECT MAX(m.created_at)
-//                            FROM messages m
-//                            WHERE m.conversation_id = c.id
-//                        )
-//              WHERE u.username not like :username
-//                        AND c.id IN (SELECT id FROM conversations c2 join conversations_users cu2 ON c2.id = cu2.conversation_id WHERE cu2.user_id = :userId)
-
-
-
-
-
-//SELECT
-//                DISTINCT
-//                    c.id,
-//                    CASE
-//                        WHEN LENGTH(c.name) = 0 or c.name is null THEN u.username
-//                        ELSE c.name
-//                    END as conversation_name,
-//                   CASE
-//                        WHEN LENGTH(c.name)>1 THEN c.image_repository
-//                        ELSE u.image_repository
-//                    END image_repository,
-//                    CASE
-//                        WHEN LENGTH(c.name)>1 THEN c.image_file_name
-//                        ELSE u.image_file_name
-//                    END image_file_name,
-//                    c.created_at,
-//                    c.updated_at,
-//                    c.type
-//                FROM conversations c
-//                JOIN conversations_users cu on c.id = cu.conversation_id
-//                JOIN users u on cu.user_id = u.id
-//                WHERE c.id = :id and u.username not like :username");

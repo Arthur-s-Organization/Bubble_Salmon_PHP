@@ -22,7 +22,7 @@ class JwtService
             "iss" => $serverName,
             "nbf" => $issuedAt->getTimestamp(),
             "exp" => $expire,
-            "data" =>  CryptService::encrypt(json_encode($datas))//$datas
+            "data" =>  CryptService::encrypt(json_encode($datas))
         ];
 
         $jwt = JWT::encode($data, self::$secretKey, 'HS256');
@@ -46,7 +46,7 @@ class JwtService
         {
             $token = JWT::decode($jwt, new Key(self::$secretKey, 'HS256'));
         }
-        catch (\Exception $e) // a gérer le try catach ici
+        catch (\Exception $e)
         {
             throw new ApiException("The token data is not compatible : {$e->getMessage()}", 401);
         }
@@ -58,7 +58,7 @@ class JwtService
             throw new ApiException("The token data is not compatible", 401);
         }
 
-        return json_decode(CryptService::decrypt($token->data)); //On récupère le champs datas du payload du JWT pour pouvoir par exemple comparer les roles avec ceux attendus;
+        return json_decode(CryptService::decrypt($token->data));
     }
 
 

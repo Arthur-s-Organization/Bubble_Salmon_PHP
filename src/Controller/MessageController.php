@@ -78,7 +78,7 @@ class MessageController {
         return json_encode(["code" => 0, "Message" => "Message ajouté avec succès", "Id" => $id]);
     }
 
-    public function getAll(int $conversationId) // récupére tous les messages d'une conversation avec son id
+    public function getAll(int $conversationId) // récupére tous les messages d'une conversation grâce à son id
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);

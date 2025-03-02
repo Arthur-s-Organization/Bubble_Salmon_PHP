@@ -3,9 +3,6 @@
 require '../vendor/autoload.php';
 
 spl_autoload_register(function ($class) {
-    // J'obient : src\Model\Article
-    // Faire un require du $class
-    // unix séparé par les /, windows par des \
     $ds = DIRECTORY_SEPARATOR;
     $dir = $_SERVER['DOCUMENT_ROOT'] . $ds."..";
     $className = str_replace("\\", $ds, $class);
@@ -51,8 +48,6 @@ if($controller !== '')
 }
 else
 {
-//    $controller = new \src\Controller\UserController();
-//    echo $controller->index();
     echo json_encode(["message" => "Welcome to our API!"]);
 }
 
