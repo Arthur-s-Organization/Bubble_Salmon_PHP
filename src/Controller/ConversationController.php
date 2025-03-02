@@ -15,7 +15,7 @@ class ConversationController
     }
 
 
-    public function getAll() // récupère toutes les conversations de l'utilisateur (nom de la conv ou nom du desti suivant le type de conv) ,avec le dernier message envoyé
+    public function getAll() // récupère toutes les conversations de l'utilisateur (nom de la conversation ou nom du destinataire suivant le type de conversation), avec le dernier message envoyé
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
@@ -28,7 +28,7 @@ class ConversationController
     }
 
 
-    public function show(int $conversationId) // récupère toutes les infos d'une conversation avec son nom si conv de groupe et avec le nom du dest si conversation à deux (penser à implémenter vérif que si la conversation demandée n'appartient pas à l'utilsateur on lance une erreur)
+    public function show(int $conversationId) // récupère toutes les infos d'une conversation avec son nom si conversation de groupe et avec le nom du dest si conversation à deux (penser à implémenter vérif que si la conversation demandée n'appartient pas à l'utilsateur on lance une erreur)
     {
         if ($_SERVER["REQUEST_METHOD"] !== "GET") {
             throw new ApiException("Method GET expected", 405);
@@ -43,7 +43,7 @@ class ConversationController
     }
 
 
-    public function getOrCreate() // créé un conversation à 2 si elle n'existe pas puis la renvoie
+    public function getOrCreate() // créé un conversation à 1 ou à 2 suivant le RecipientId envoyé. Si elle existe déjà on se contente de la renvoyer.
     {
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             throw new ApiException("Method POST expected", 405);
@@ -51,7 +51,7 @@ class ConversationController
 
         $tokensDatas = JwtService::checkToken();
         $userId = (int)$tokensDatas->id;
-        $username = (string)$tokensDatas->username;
+//        $username = (string)$tokensDatas->username;
 
         $jsonDatasStr = file_get_contents("php://input");
         $jsonDatasObj = json_decode($jsonDatasStr);
@@ -67,7 +67,7 @@ class ConversationController
         $recipentId = $jsonDatasObj->RecipientId;
         $now = new \DateTime();
 
-        //cas au on créé une self conv
+        //cas ou on créé une conversation avec soi même
         if ($userId == $recipentId)
         {
             if (Conversation::sqlSelfExists($userId))
@@ -83,11 +83,11 @@ class ConversationController
                 $conversationId = Conversation::sqlAddSelf($conversation, $userId);
             }
         }
-        // cas ou on créé une conv à 2
+        // cas ou on créé une conversation à 2
         else
         {
             if (Conversation::sqlExists($userId, $recipentId)) {
-                // recup l'id de conversation existante entre les deux users
+                // recupération de l'id de conversation existante entre les deux users
                 $conversationId = Conversation::sqlGetIdByUsersId($userId, $recipentId);
             }
             else
@@ -169,7 +169,7 @@ class ConversationController
     }
 
 
-    public function addUser() // Ajoute un user à une conversation de groupe
+    public function addUser() // Ajoute un utilisateur à une conversation de groupe
     {
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             throw new ApiException("Method POST expected", 405);
@@ -231,7 +231,7 @@ class ConversationController
             $ifp = fopen($repository . "/" . $imageName, "wb");
             fwrite($ifp, base64_decode($jsonDatasObj->Image));
             fclose($ifp);
-            // implémenter la suppression de l'ancienne image si il y en a une
+            // Suppression de l'ancienne image si il y en a une
             if (!empty($oldSqlRepository) && !empty($oldSqlImageName)) {
                 if (file_exists("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}")) {
                     unlink("{$_SERVER["DOCUMENT_ROOT"]}/uploads/images/{$oldSqlRepository}/{$oldSqlImageName}");
@@ -240,7 +240,7 @@ class ConversationController
         }
 
         $oldName = Conversation::sqlGetNamebyId($conversationId);
-        if (isset($jsonDatasObj->Name)) { // ternaire non ?
+        if (isset($jsonDatasObj->Name)) {
             $name = $jsonDatasObj->Name;
         }
         else {
@@ -271,62 +271,4 @@ class ConversationController
 
         return json_encode($users);
     }
-
-
-
-
-    //    public function add() // créé une nouvelle conversation à deux (l'utilisateur connecté plus un autre)
-//    {
-//        if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-//            throw new ApiException("Method POST expected", 405);
-//        }
-//
-//        $tokensDatas = JwtService::checkToken();
-//        $userId = (int)$tokensDatas->id;
-//
-//        $jsonDatasStr = file_get_contents("php://input");
-//        $jsonDatasObj = json_decode($jsonDatasStr);
-//
-//        if (empty($jsonDatasObj)) {
-//            throw new ApiException("No data provided in the request body", 400);
-//        }
-//
-//        if (!isset($jsonDatasObj->RecipientId)){
-//            throw new ApiException("Missing required fields : RecipientId is required", 400);
-//        }
-//
-////        if (!isset($jsonDatasObj->Image)) {
-////            throw new ApiException("Missing required fields : Image is required", 400);
-////        }
-//        $recipentId = $jsonDatasObj->RecipientId;
-//
-//        $sqlRepository = null;
-//        $imageName = null;
-//        $now = new \DateTime();
-//
-//        if (isset($jsonDatasObj->Image)) {
-//            $imageName = uniqid() . ".jpg";
-//            //Fabriquer le répertoire d'accueil
-//            $dateNow = new \DateTime();
-//            $sqlRepository = $now->format('Y/m');
-//            $repository = './uploads/images/' . $now->format('Y/m');
-//            if (!is_dir($repository)) {
-//                mkdir($repository, 0777, true);
-//            }
-//            //Fabriquer l'image
-//            $ifp = fopen($repository . "/" . $imageName, "wb");
-//            fwrite($ifp, base64_decode($jsonDatasObj->Image));
-//            fclose($ifp);
-//        }
-//
-//        $conversation = new Conversation();
-//        $conversation->setName($jsonDatasObj->Name)
-//            ->setImageRepository($sqlRepository)
-//            ->setImageFileName($imageName)
-//            ->setCreatedAt($now)
-//            ->setUpdatedAt($now);
-//
-//        $conversationId = Conversation::SqlAdd($conversation, $userId, $recipentId);
-//        return json_encode(["status" => "success", "Message" => "Conversation successfully added", "conversationId" => $conversationId]);
-//    }
 }

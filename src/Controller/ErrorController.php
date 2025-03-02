@@ -10,8 +10,7 @@ class ErrorController
 
         return json_encode([
             'status' => 'error',
-            'message' => $e->getMessage(),
-//            'code' => $e->getCode(),
+            'message' => $e->getMessage()
         ]);
     }
 }
