@@ -32,6 +32,8 @@ class UserController {
             throw new ApiException("Missing required fields", 400); // peut etre ajouter les autres champs
         }
 
+//        if($jsonDatasObj->Firstname)
+
         $sqlRepository = null;
         $imageName = null;
         $now = new DateTime();
