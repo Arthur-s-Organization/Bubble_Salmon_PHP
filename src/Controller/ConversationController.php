@@ -68,7 +68,7 @@ class ConversationController
         $now = new \DateTime();
 
         //cas au on créé une self conv
-        if ($userId === $recipentId)
+        if ($userId == $recipentId)
         {
             if (Conversation::sqlSelfExists($userId))
             {
