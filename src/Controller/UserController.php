@@ -6,6 +6,7 @@ use DateTime;
 use src\Exception\ApiException;
 use src\Model\User;
 use src\Service\JwtService;
+use src\Utils\StringValidator;
 
 class UserController {
 
@@ -29,10 +30,21 @@ class UserController {
 
         if (!isset($jsonDatasObj->Firstname) || !isset($jsonDatasObj->Lastname) || !isset($jsonDatasObj->Phone) || !isset($jsonDatasObj->BirthDate) || !isset($jsonDatasObj->Username) || !isset($jsonDatasObj->Password))
         {
-            throw new ApiException("Missing required fields", 400); // peut etre ajouter les autres champs
+            throw new ApiException("Missing required fields", 400);
         }
 
-//        if($jsonDatasObj->Firstname)
+
+        if (!StringValidator::isOnlyLetters($jsonDatasObj->Firstname)) {
+            throw new ApiException("The 'Firstname' field must contain only letters and no special characters or numbers.", 400);
+        }
+
+        if (!StringValidator::isOnlyLetters($jsonDatasObj->Lastname)) {
+            throw new ApiException("The 'LastName' field must contain only letters and no special characters or numbers.", 400);
+        }
+
+        if (!StringValidator::phoneIsValid($jsonDatasObj->Phone)) {
+            throw new ApiException("The 'Phone' field must contain only numbers and may optionally start with a '+' sign.", 400);
+        }
 
         $sqlRepository = null;
         $imageName = null;
